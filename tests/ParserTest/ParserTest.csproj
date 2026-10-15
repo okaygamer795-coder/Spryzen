@@ -8,12 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="..\..\src\SideLoadr\Models.cs" />
-    <Compile Include="..\..\src\SideLoadr\Services\PlistParser.cs" />
-    <Compile Include="..\..\src\SideLoadr\Services\PlistWriter.cs" />
-    <Compile Include="..\..\src\SideLoadr\Services\IpaReader.cs" />
-    <Compile Include="..\..\src\SideLoadr\Services\IpaCustomizer.cs" />
-    <Compile Include="..\..\src\SideLoadr\Services\UpdateService.cs" />
+    <Compile Include="..\..\src\SideLoadr\Cli.cs" />
+    <Compile Include="..\..\src\SideLoadr\Services\*.cs" />
   </ItemGroup>
 
 </Project>

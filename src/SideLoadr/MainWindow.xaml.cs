@@ -24,11 +24,16 @@ public partial class MainWindow : Window
 {
     private IpaInfo? _ipa;
     private CancellationTokenSource? _cts;
+    private WatchFolderService? _watcher;
+
+    private static string DefaultWatchFolder => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "SideLoadr", "Auto");
 
     public MainWindow()
     {
         InitializeComponent();
         Loaded += MainWindow_Loaded;
+        Closed += (_, _) => _watcher?.Dispose();
     }
 
     private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -41,6 +46,17 @@ public partial class MainWindow : Window
         RefreshTracked();
         _ = RefreshDevicesAsync();
         _ = UpdateService.CheckForUpdatesAsync(msg => Log(msg), CancellationToken.None);
+        WatchModeBox.ItemsSource = new[] { "Install signed IPAs", "Sign + install (needs Apple ID)" };
+        WatchModeBox.SelectedIndex = 0;
+        WatchFolderBox.Text = DefaultWatchFolder;
+        if (CredentialStore.TryLoad(out string savedId, out string savedPwd))
+        {
+            AppleIdBox.Text = savedId;
+            PwdBox.Password = savedPwd;
+            RememberMeBox.IsChecked = true;
+            Log("Loaded remembered credentials.");
+        }
+        _ = UpdateKeepAliveStatusAsync();
     }
 
     // ---------- logging ----------
@@ -230,41 +246,19 @@ public partial class MainWindow : Window
             return;
         }
         var expiring = AppTracker.Load().Where(a => a.DaysLeft <= 2 && !string.IsNullOrEmpty(a.IpaPath)).ToList();
-        var skipped = AppTracker.Load().Count - expiring.Count;
         if (expiring.Count == 0)
         {
-            Log(skipped > 0
-                ? "Nothing to refresh (tracked apps were installed before path tracking — reinstall once to enable)."
+            Log(AppTracker.Load().Any(a => string.IsNullOrEmpty(a.IpaPath))
+                ? "Nothing to refresh (some tracked apps were installed before path tracking — reinstall once to enable)."
                 : "Nothing expiring within 2 days.");
             return;
         }
         AppTracker.SaveSettings(new AppSettings(appleId, anisette, SelectedDevice?.Udid));
         await RunGuardedAsync($"refresh {expiring.Count} app(s)", async (log, ct) =>
         {
-            int ok = 0;
-            foreach (var app in expiring)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (!File.Exists(app.IpaPath))
-                {
-                    log($"SKIP {app.BundleName}: original IPA not found at {app.IpaPath}");
-                    continue;
-                }
-                try
-                {
-                    var req = new SignRequest(app.IpaPath, appleId, password, anisette, app.Udid, Request2faCodeAsync);
-                    string signed = await SigningService.SignWithFreeAccountAsync(req, log, ct);
-                    await InstallService.InstallAsync(signed, string.IsNullOrEmpty(app.Udid) ? null : app.Udid, log, ct);
-                    AppTracker.RecordInstalled(app.BundleId, app.BundleName, app.Udid, app.IpaPath);
-                    ok++;
-                }
-                catch (Exception ex)
-                {
-                    log($"FAILED {app.BundleName}: {ex.Message}");
-                }
-            }
+            var (ok, total) = await RefreshAllService.RunAsync(appleId, password, anisette, Request2faCodeAsync, log, ct);
             Dispatcher.Invoke(RefreshTracked);
-            log($"Refresh-all done: {ok}/{expiring.Count} renewed.");
+            log($"Refresh-all done: {ok}/{total} renewed.");
         });
     }
 
@@ -293,6 +287,131 @@ public partial class MainWindow : Window
     private async void Update_Click(object sender, RoutedEventArgs e)
         => await RunGuardedAsync("update check", (log, ct) => UpdateService.CheckForUpdatesAsync(log, ct));
 
+    // ---------- pairing ----------
+
+    private async void Pair_Click(object sender, RoutedEventArgs e)
+        => await RunGuardedAsync("pair", async (log, ct) =>
+        {
+            log(await PairingService.RunAsync("pair", SelectedDevice?.Udid, log, ct));
+            await RefreshDevicesAsync();
+        });
+
+    private async void ValidatePair_Click(object sender, RoutedEventArgs e)
+        => await RunGuardedAsync("validate pairing", async (log, ct) =>
+            log(await PairingService.RunAsync("validate", SelectedDevice?.Udid, log, ct)));
+
+    private async void Unpair_Click(object sender, RoutedEventArgs e)
+        => await RunGuardedAsync("unpair", async (log, ct) =>
+        {
+            log(await PairingService.RunAsync("unpair", SelectedDevice?.Udid, log, ct));
+            await RefreshDevicesAsync();
+        });
+
+    // ---------- auto-folder ----------
+
+    private void WatchFolderDefault_Click(object sender, RoutedEventArgs e)
+    {
+        WatchFolderBox.Text = DefaultWatchFolder;
+    }
+
+    private void OpenWatchFolder_Click(object sender, RoutedEventArgs e)
+    {
+        string folder = string.IsNullOrWhiteSpace(WatchFolderBox.Text) ? DefaultWatchFolder : WatchFolderBox.Text.Trim();
+        Directory.CreateDirectory(folder);
+        System.Diagnostics.Process.Start("explorer.exe", folder);
+    }
+
+    private void Watch_Click(object sender, RoutedEventArgs e)
+    {
+        if (_watcher?.Running == true)
+        {
+            _watcher.Stop();
+            WatchButton.Content = "Start watching";
+            Log("Stopped watching.");
+            return;
+        }
+        string folder = string.IsNullOrWhiteSpace(WatchFolderBox.Text) ? DefaultWatchFolder : WatchFolderBox.Text.Trim();
+        WatchFolderBox.Text = folder;
+        bool sign = WatchModeBox.SelectedIndex == 1;
+        string appleId = AppleIdBox.Text.Trim();
+        string password = PwdBox.Password;
+        string anisette = string.IsNullOrWhiteSpace(AnisetteBox.Text) ? AppTracker.DefaultAnisetteUrl : AnisetteBox.Text.Trim();
+        string? udid = SelectedDevice?.Udid;
+        if (sign)
+        {
+            if (appleId.Length == 0 || password.Length == 0)
+            {
+                if (!CredentialStore.TryLoad(out appleId, out password))
+                {
+                    Log("Sign+install mode needs your Apple ID (or Remember me).", isError: true);
+                    return;
+                }
+            }
+        }
+        var watcher = new WatchFolderService();
+        watcher.Start(folder, path => ProcessWatchFileAsync(path, sign, appleId, password, anisette, udid), msg => Log(msg));
+        _watcher = watcher;
+        WatchButton.Content = "Stop watching";
+    }
+
+    private async Task ProcessWatchFileAsync(string path, bool sign, string appleId, string password, string anisette, string? udid)
+    {
+        Log($"Auto-folder picked up {Path.GetFileName(path)}.");
+        try
+        {
+            if (!sign)
+            {
+                await InstallService.InstallAsync(path, udid, msg => Log(msg), CancellationToken.None);
+                var info = IpaReader.Read(path);
+                AppTracker.RecordInstalled(info.BundleId, info.BundleName, udid, path);
+            }
+            else
+            {
+                var req = new SignRequest(path, appleId, password, anisette, udid, () =>
+                    Task.FromException<string>(new InvalidOperationException(
+                        "Auto-folder hit a 2FA prompt — sign in manually once first.")));
+                string signed = await SigningService.SignWithFreeAccountAsync(req, msg => Log(msg), CancellationToken.None);
+                await InstallService.InstallAsync(signed, udid, msg => Log(msg), CancellationToken.None);
+                var info = IpaReader.Read(path);
+                AppTracker.RecordInstalled(info.BundleId, info.BundleName, udid, path);
+            }
+            Dispatcher.Invoke(RefreshTracked);
+        }
+        catch (Exception ex)
+        {
+            Log($"Auto-folder failed for {Path.GetFileName(path)}: {ex.Message}", isError: true);
+        }
+    }
+
+    // ---------- keep-alive ----------
+
+    private async void KeepAlive_Click(object sender, RoutedEventArgs e)
+        => await RunGuardedAsync("schedule auto-refresh", async (log, ct) =>
+        {
+            await KeepAliveService.CreateDailyTaskAsync(log, ct);
+            await UpdateKeepAliveStatusAsync();
+        });
+
+    private async void KeepAliveRemove_Click(object sender, RoutedEventArgs e)
+        => await RunGuardedAsync("remove auto-refresh", async (log, ct) =>
+        {
+            await KeepAliveService.DeleteTaskAsync(log, ct);
+            await UpdateKeepAliveStatusAsync();
+        });
+
+    private async Task UpdateKeepAliveStatusAsync()
+    {
+        try
+        {
+            string status = await KeepAliveService.QueryStatusAsync(CancellationToken.None);
+            Dispatcher.Invoke(() => KeepAliveStatusLabel.Text = status);
+        }
+        catch
+        {
+            Dispatcher.Invoke(() => KeepAliveStatusLabel.Text = "Auto-refresh: unknown");
+        }
+    }
+
     // ---------- actions ----------
 
     private async void SignInstall_Click(object sender, RoutedEventArgs e)
@@ -316,6 +435,22 @@ public partial class MainWindow : Window
             AnisetteBox.Text = anisette;
         }
         AppTracker.SaveSettings(new AppSettings(appleId, anisette, SelectedDevice?.Udid));
+        try
+        {
+            if (RememberMeBox.IsChecked == true)
+            {
+                CredentialStore.Save(appleId, password);
+                Log("Credentials remembered on this PC.");
+            }
+            else
+            {
+                CredentialStore.Delete();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log("Remember-me failed: " + ex.Message, isError: true);
+        }
 
         await RunGuardedAsync("sign + install", async (log, ct) =>
         {
@@ -395,6 +530,14 @@ public partial class MainWindow : Window
             AppIdsButton.IsEnabled = !busy;
             UpdateButton.IsEnabled = !busy;
             IconBrowseButton.IsEnabled = !busy;
+            PairButton.IsEnabled = !busy;
+            ValidatePairButton.IsEnabled = !busy;
+            UnpairButton.IsEnabled = !busy;
+            WatchButton.IsEnabled = !busy;
+            WatchFolderDefaultButton.IsEnabled = !busy;
+            OpenWatchFolderButton.IsEnabled = !busy;
+            KeepAliveButton.IsEnabled = !busy;
+            KeepAliveRemoveButton.IsEnabled = !busy;
             BusyBar.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
             StatusLabel.Text = status;
         });

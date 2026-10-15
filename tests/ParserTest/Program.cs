@@ -84,5 +84,35 @@ Check(UpdateService.IsNewer("v0.3.0", "0.2.0"), "update newer");
 Check(!UpdateService.IsNewer("v0.2.0", "0.2.0"), "update same");
 Check(!UpdateService.IsNewer("v0.1.0", "0.2.0"), "update older");
 
+// CLI parsing
+var cli1 = CliParser.Parse(new[] { "--refresh-all", "--udid", "ABC" });
+Check(cli1.Mode == "refresh-all" && cli1.Udid == "ABC", "cli refresh-all");
+var cli2 = CliParser.Parse(new[] { "--install", "a.ipa" });
+Check(cli2.Mode == "install" && cli2.IpaPath == "a.ipa", "cli install");
+Check(CliParser.IsCli(new[] { "--help" }), "cli detected");
+Check(!CliParser.IsCli(Array.Empty<string>()), "gui detected");
+bool usage = false;
+try { CliParser.Parse(new[] { "--bogus" }); } catch (UsageException) { usage = true; }
+Check(usage, "cli rejects unknown");
+
+// watch-folder loop guard
+Check(WatchFolderService.ShouldProcess(@"D:\SideLoadr\tests\test.ipa"), "watch accepts ipa");
+string signedCopy = @"D:\SideLoadr\tests\tmp-signed.ipa";
+File.Copy(@"D:\SideLoadr\tests\test.ipa", signedCopy, true);
+Check(!WatchFolderService.ShouldProcess(signedCopy), "watch ignores own output");
+string cloneCopy = @"D:\SideLoadr\tests\tmp-clone2.ipa";
+File.Copy(@"D:\SideLoadr\tests\test.ipa", cloneCopy, true);
+Check(!WatchFolderService.ShouldProcess(cloneCopy), "watch ignores clone output");
+File.Delete(signedCopy);
+File.Delete(cloneCopy);
+
+// credential vault roundtrip (unique target, cleaned up)
+string target = "SideLoadrTest/" + Guid.NewGuid().ToString("N");
+CredentialStore.Save("test@example.com", "s3cret", target);
+bool loaded = CredentialStore.TryLoad(out string cid, out string cpw, target);
+Check(loaded && cid == "test@example.com" && cpw == "s3cret", "credential roundtrip");
+CredentialStore.Delete(target);
+Check(!CredentialStore.TryLoad(out _, out _, target), "credential deleted");
+
 Console.WriteLine(failures == 0 ? "ALL OK" : $"{failures} FAILURES");
 return failures;

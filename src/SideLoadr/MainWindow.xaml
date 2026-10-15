@@ -93,7 +93,7 @@
                         <TextBlock Text="SideLoadr" FontSize="24" FontWeight="Bold" Foreground="White"/>
                         <TextBlock Text="Sideload IPAs with a free Apple ID — drag &amp; drop an .ipa anywhere" Style="{StaticResource Hint}"/>
                     </StackPanel>
-                    <TextBlock Text="v0.3.0" DockPanel.Dock="Right" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
+                    <TextBlock Text="v0.4.0" DockPanel.Dock="Right" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
                 </DockPanel>
                 <TextBlock Name="DriverStatusLabel" Text="Checking drivers…" Style="{StaticResource Hint}" Margin="0,0,0,10"/>
                 <TextBlock Name="ToolsStatusLabel" Text="" Style="{StaticResource Hint}" Margin="0,0,0,10"/>
@@ -150,6 +150,7 @@
                             <Button Name="TestAnisetteButton" Content="Test" Style="{StaticResource Btn}" Width="80" DockPanel.Dock="Right" Margin="8,0,0,0" Click="TestAnisette_Click"/>
                             <TextBox Name="AnisetteBox" VerticalContentAlignment="Center"/>
                         </DockPanel>
+                        <CheckBox Name="RememberMeBox" Content="Remember me on this PC (Windows Credential Manager — needed for auto-refresh)" Foreground="#9E9E9E" Margin="0,8,0,0"/>
                     </StackPanel>
                 </Border>
 
@@ -193,6 +194,36 @@
                             <Button Name="AppIdsButton" Content="List my App IDs" Style="{StaticResource Btn}" Click="AppIds_Click"/>
                             <Button Name="UpdateButton" Content="Check updates" Style="{StaticResource Btn}" Click="Update_Click"/>
                         </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 5. pairing, auto-folder, keep-alive -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="5 · Pairing, auto-folder &amp; keep-alive" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="Pairing (first time per device — trust dialog appears on the iPhone)" Style="{StaticResource Hint}"/>
+                        <WrapPanel Margin="0,4,0,8">
+                            <Button Name="PairButton" Content="Pair device" Style="{StaticResource Btn}" Click="Pair_Click"/>
+                            <Button Name="ValidatePairButton" Content="Validate pairing" Style="{StaticResource Btn}" Click="ValidatePair_Click"/>
+                            <Button Name="UnpairButton" Content="Unpair" Style="{StaticResource Btn}" Click="Unpair_Click"/>
+                        </WrapPanel>
+                        <TextBlock Text="Auto-folder (drop .ipa files in — processed automatically, our own outputs ignored)" Style="{StaticResource Hint}"/>
+                        <DockPanel Margin="0,4,0,0">
+                            <Button Name="WatchButton" Content="Start watching" Style="{StaticResource Btn}" Width="110" DockPanel.Dock="Right" Margin="8,0,0,0" Click="Watch_Click"/>
+                            <Button Name="OpenWatchFolderButton" Content="Open" Style="{StaticResource Btn}" Width="70" DockPanel.Dock="Right" Margin="8,0,0,0" Click="OpenWatchFolder_Click"/>
+                            <Button Name="WatchFolderDefaultButton" Content="Default" Style="{StaticResource Btn}" Width="70" DockPanel.Dock="Right" Margin="8,0,0,0" Click="WatchFolderDefault_Click"/>
+                            <TextBox Name="WatchFolderBox" VerticalContentAlignment="Center"/>
+                        </DockPanel>
+                        <DockPanel Margin="0,4,0,0">
+                            <TextBlock Text="Action:" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <ComboBox Name="WatchModeBox" Width="220" VerticalContentAlignment="Center"/>
+                        </DockPanel>
+                        <TextBlock Text="Keep-alive (daily scheduled auto-refresh via Task Scheduler — needs Remember me)" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
+                        <DockPanel Margin="0,4,0,0">
+                            <Button Name="KeepAliveRemoveButton" Content="Remove task" Style="{StaticResource Btn}" Width="110" DockPanel.Dock="Right" Margin="8,0,0,0" Click="KeepAliveRemove_Click"/>
+                            <Button Name="KeepAliveButton" Content="Enable daily refresh" Style="{StaticResource Btn}" Width="150" DockPanel.Dock="Right" Margin="8,0,0,0" Click="KeepAlive_Click"/>
+                            <TextBlock Name="KeepAliveStatusLabel" Text="Auto-refresh: unknown" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+                        </DockPanel>
                     </StackPanel>
                 </Border>
 
