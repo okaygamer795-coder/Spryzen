@@ -7,7 +7,7 @@ public sealed record DeviceInfo(string Name, string? Udid, string Status);
 public sealed record IpaInfo(string FilePath, string BundleId, string BundleName, string Version, string? MinOs);
 
 /// <summary>Record of an installed app used for 7-day expiry tracking.</summary>
-public sealed record SideloadedApp(string BundleId, string BundleName, string Udid, DateTimeOffset InstalledAt, DateTimeOffset ExpiresAt)
+public sealed record SideloadedApp(string BundleId, string BundleName, string Udid, DateTimeOffset InstalledAt, DateTimeOffset ExpiresAt, string IpaPath = "")
 {
     public int DaysLeft => (int)Math.Ceiling((ExpiresAt - DateTimeOffset.Now).TotalDays);
 }

@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO;
-
 namespace SideLoadr.Services;
 
 /// <summary>Installs an (already signed) IPA onto a connected device via
@@ -38,5 +37,44 @@ public static class InstallService
         if (p.ExitCode != 0)
             throw new InvalidOperationException($"Install failed (exit {p.ExitCode}). {(await stdErr).Trim()}".Trim());
         log("Install finished.");
+    }
+
+    public sealed record BatchResult(string IpaPath, string BundleId, bool Ok, string? Error);
+
+    /// <summary>Installs several already-signed IPAs in sequence, recording each
+    /// success in the tracker. One failure doesn't stop the rest.</summary>
+    public static async Task<List<BatchResult>> InstallManyAsync(
+        IEnumerable<string> ipaPaths, string? udid, Action<string> log, CancellationToken ct)
+    {
+        var results = new List<BatchResult>();
+        foreach (string path in ipaPaths)
+        {
+            ct.ThrowIfCancellationRequested();
+            IpaInfo info;
+            try
+            {
+                info = IpaReader.Read(path);
+            }
+            catch (Exception ex)
+            {
+                results.Add(new BatchResult(path, "?", false, "unreadable IPA: " + ex.Message));
+                log($"SKIP {Path.GetFileName(path)}: not a valid IPA.");
+                continue;
+            }
+            try
+            {
+                await InstallAsync(path, udid, log, ct);
+                AppTracker.RecordInstalled(info.BundleId, info.BundleName, udid, path);
+                results.Add(new BatchResult(path, info.BundleId, true, null));
+            }
+            catch (Exception ex)
+            {
+                results.Add(new BatchResult(path, info.BundleId, false, ex.Message));
+                log($"FAILED {info.BundleName}: {ex.Message}");
+            }
+        }
+        int ok = results.Count(r => r.Ok);
+        log($"Batch done: {ok}/{results.Count} installed.");
+        return results;
     }
 }

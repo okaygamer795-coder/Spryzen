@@ -29,12 +29,12 @@ public static class AppTracker
         }
     }
 
-    public static void RecordInstalled(string bundleId, string name, string? udid)
+    public static void RecordInstalled(string bundleId, string name, string? udid, string ipaPath = "")
     {
         var apps = Load();
         apps.RemoveAll(a => a.BundleId == bundleId && a.Udid == (udid ?? ""));
         var now = DateTimeOffset.Now;
-        apps.Add(new SideloadedApp(bundleId, name, udid ?? "", now, now.AddDays(7)));
+        apps.Add(new SideloadedApp(bundleId, name, udid ?? "", now, now.AddDays(7), ipaPath ?? ""));
         Save(apps);
     }
 

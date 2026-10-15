@@ -1,5 +1,6 @@
 ﻿using Microsoft.Win32;
 using SideLoadr.Services;
+using System.IO;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Documents;
@@ -39,6 +40,7 @@ public partial class MainWindow : Window
             : settings.AnisetteUrl;
         RefreshTracked();
         _ = RefreshDevicesAsync();
+        _ = UpdateService.CheckForUpdatesAsync(msg => Log(msg), CancellationToken.None);
     }
 
     // ---------- logging ----------
@@ -145,10 +147,151 @@ public partial class MainWindow : Window
         }
         await RunGuardedAsync("anisette test", async (log, ct) =>
         {
-            var data = await AppleAuthService.FetchAnisetteAsync(url, ct);
-            log($"Anisette OK ({data.Count} fields: {string.Join(", ", data.Keys.Take(6))}…).");
+            var (data, server) = await AppleAuthService.FetchAnisetteAsync(url, ct);
+            log($"Anisette OK via {server} ({data.Count} fields: {string.Join(", ", data.Keys.Take(6))}…).");
         });
     }
+
+    // ---------- power tools ----------
+
+    private void IconBrowse_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFileDialog { Filter = "PNG images (*.png)|*.png" };
+        if (dlg.ShowDialog() == true)
+            IconPathBox.Text = dlg.FileName;
+    }
+
+    private void Clone_Click(object sender, RoutedEventArgs e)
+    {
+        if (_ipa is null)
+        {
+            Log("Pick an IPA first.", isError: true);
+            return;
+        }
+        try
+        {
+            var result = IpaCustomizer.CloneIpa(_ipa.FilePath, NewBundleIdBox.Text, NewNameBox.Text);
+            foreach (string note in result.Notes)
+                Log("Clone: " + note);
+            SetIpa(result.Path);
+        }
+        catch (Exception ex)
+        {
+            Log("Clone failed: " + ex.Message, isError: true);
+        }
+    }
+
+    private void Customize_Click(object sender, RoutedEventArgs e)
+    {
+        if (_ipa is null)
+        {
+            Log("Pick an IPA first.", isError: true);
+            return;
+        }
+        try
+        {
+            var result = IpaCustomizer.CustomizeIpa(_ipa.FilePath, NewBundleIdBox.Text, NewNameBox.Text,
+                string.IsNullOrWhiteSpace(IconPathBox.Text) ? null : IconPathBox.Text);
+            foreach (string note in result.Notes)
+                Log("Customize: " + note);
+            SetIpa(result.Path);
+        }
+        catch (Exception ex)
+        {
+            Log("Customize failed: " + ex.Message, isError: true);
+        }
+    }
+
+    private async void Batch_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFileDialog
+        {
+            Filter = "iPhone apps (*.ipa)|*.ipa",
+            Multiselect = true,
+        };
+        if (dlg.ShowDialog() != true || dlg.FileNames.Length == 0)
+            return;
+        string[] files = dlg.FileNames;
+        await RunGuardedAsync($"batch install ({files.Length} files)", async (log, ct) =>
+        {
+            await InstallService.InstallManyAsync(files, SelectedDevice?.Udid, log, ct);
+            Dispatcher.Invoke(RefreshTracked);
+        });
+    }
+
+    private async void RefreshAll_Click(object sender, RoutedEventArgs e)
+    {
+        string appleId = AppleIdBox.Text.Trim();
+        string password = PwdBox.Password;
+        string anisette = string.IsNullOrWhiteSpace(AnisetteBox.Text) ? AppTracker.DefaultAnisetteUrl : AnisetteBox.Text.Trim();
+        if (appleId.Length == 0 || password.Length == 0)
+        {
+            Log("Enter your Apple ID and password first.", isError: true);
+            return;
+        }
+        var expiring = AppTracker.Load().Where(a => a.DaysLeft <= 2 && !string.IsNullOrEmpty(a.IpaPath)).ToList();
+        var skipped = AppTracker.Load().Count - expiring.Count;
+        if (expiring.Count == 0)
+        {
+            Log(skipped > 0
+                ? "Nothing to refresh (tracked apps were installed before path tracking — reinstall once to enable)."
+                : "Nothing expiring within 2 days.");
+            return;
+        }
+        AppTracker.SaveSettings(new AppSettings(appleId, anisette, SelectedDevice?.Udid));
+        await RunGuardedAsync($"refresh {expiring.Count} app(s)", async (log, ct) =>
+        {
+            int ok = 0;
+            foreach (var app in expiring)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (!File.Exists(app.IpaPath))
+                {
+                    log($"SKIP {app.BundleName}: original IPA not found at {app.IpaPath}");
+                    continue;
+                }
+                try
+                {
+                    var req = new SignRequest(app.IpaPath, appleId, password, anisette, app.Udid, Request2faCodeAsync);
+                    string signed = await SigningService.SignWithFreeAccountAsync(req, log, ct);
+                    await InstallService.InstallAsync(signed, string.IsNullOrEmpty(app.Udid) ? null : app.Udid, log, ct);
+                    AppTracker.RecordInstalled(app.BundleId, app.BundleName, app.Udid, app.IpaPath);
+                    ok++;
+                }
+                catch (Exception ex)
+                {
+                    log($"FAILED {app.BundleName}: {ex.Message}");
+                }
+            }
+            Dispatcher.Invoke(RefreshTracked);
+            log($"Refresh-all done: {ok}/{expiring.Count} renewed.");
+        });
+    }
+
+    private async void AppIds_Click(object sender, RoutedEventArgs e)
+    {
+        string appleId = AppleIdBox.Text.Trim();
+        string password = PwdBox.Password;
+        string anisette = string.IsNullOrWhiteSpace(AnisetteBox.Text) ? AppTracker.DefaultAnisetteUrl : AnisetteBox.Text.Trim();
+        if (appleId.Length == 0 || password.Length == 0)
+        {
+            Log("Enter your Apple ID and password first.", isError: true);
+            return;
+        }
+        await RunGuardedAsync("list App IDs", async (log, ct) =>
+        {
+            using var http = new System.Net.Http.HttpClient();
+            var auth = new AppleAuthService(http, anisette);
+            AppleSession session = await auth.LoginAsync(appleId, password, Request2faCodeAsync, log, ct);
+            var portal = new DeveloperPortalService(http, session);
+            var ids = await portal.ListAppIdsAsync(log, ct);
+            foreach (var (identifier, name) in ids)
+                log($"  {identifier}" + (name.Length > 0 && name != identifier ? $"  ({name})" : ""));
+        });
+    }
+
+    private async void Update_Click(object sender, RoutedEventArgs e)
+        => await RunGuardedAsync("update check", (log, ct) => UpdateService.CheckForUpdatesAsync(log, ct));
 
     // ---------- actions ----------
 
@@ -180,7 +323,7 @@ public partial class MainWindow : Window
                 SelectedDevice?.Udid, Request2faCodeAsync);
             string signed = await SigningService.SignWithFreeAccountAsync(req, log, ct);
             await InstallService.InstallAsync(signed, SelectedDevice?.Udid, log, ct);
-            AppTracker.RecordInstalled(_ipa.BundleId, _ipa.BundleName, SelectedDevice?.Udid);
+            AppTracker.RecordInstalled(_ipa.BundleId, _ipa.BundleName, SelectedDevice?.Udid, _ipa.FilePath);
             Dispatcher.Invoke(RefreshTracked);
             log("Done. Free certificates last 7 days — come back to re-sign before expiry.");
         });
@@ -196,7 +339,7 @@ public partial class MainWindow : Window
         await RunGuardedAsync("install", async (log, ct) =>
         {
             await InstallService.InstallAsync(_ipa.FilePath, SelectedDevice?.Udid, log, ct);
-            AppTracker.RecordInstalled(_ipa.BundleId, _ipa.BundleName, SelectedDevice?.Udid);
+            AppTracker.RecordInstalled(_ipa.BundleId, _ipa.BundleName, SelectedDevice?.Udid, _ipa.FilePath);
             Dispatcher.Invoke(RefreshTracked);
         });
     }
@@ -245,6 +388,13 @@ public partial class MainWindow : Window
             RefreshButton.IsEnabled = !busy;
             BrowseButton.IsEnabled = !busy;
             TestAnisetteButton.IsEnabled = !busy;
+            CloneButton.IsEnabled = !busy;
+            CustomizeButton.IsEnabled = !busy;
+            BatchButton.IsEnabled = !busy;
+            RefreshAllButton.IsEnabled = !busy;
+            AppIdsButton.IsEnabled = !busy;
+            UpdateButton.IsEnabled = !busy;
+            IconBrowseButton.IsEnabled = !busy;
             BusyBar.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
             StatusLabel.Text = status;
         });

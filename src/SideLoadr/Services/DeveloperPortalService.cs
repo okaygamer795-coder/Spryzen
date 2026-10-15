@@ -65,6 +65,32 @@ public sealed class DeveloperPortalService(HttpClient http, AppleSession session
         return cert;
     }
 
+    /// <summary>Lists registered App IDs so users can see their free-account
+    /// quota usage (~10 App IDs max). Deletion happens on developer.apple.com.</summary>
+    public async Task<IReadOnlyList<(string Identifier, string Name)>> ListAppIdsAsync(Action<string> log, CancellationToken ct)
+    {
+        log("Listing registered App IDs...");
+        using var resp = await http.GetAsync($"{Base}/bundleIds?teamId={Uri.EscapeDataString(session.TeamId)}", ct);
+        string body = await resp.Content.ReadAsStringAsync(ct);
+        if (!resp.IsSuccessStatusCode)
+            throw new InvalidOperationException($"App ID list failed ({(int)resp.StatusCode}). {body[..Math.Min(300, body.Length)]}");
+        var result = new List<(string, string)>();
+        using (var doc = JsonDocument.Parse(body))
+        {
+            if (doc.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var b in doc.RootElement.EnumerateArray())
+                {
+                    string id = b.TryGetProperty("identifier", out var i) ? i.GetString() ?? "?" : "?";
+                    string name = b.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                    result.Add((id, name));
+                }
+            }
+        }
+        log($"Found {result.Count} App ID(s) (free accounts cap at ~10).");
+        return result;
+    }
+
     /// <summary>Downloads the (7-day, free account) provisioning profile. Returns its local path.</summary>
     public async Task<string> FetchProfileAsync(string bundleId, Action<string> log, CancellationToken ct)
     {

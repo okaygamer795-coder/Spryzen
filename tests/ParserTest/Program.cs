@@ -26,5 +26,63 @@ Check(ipa.BundleName == "TestApp", "ipa name");
 Check(ipa.Version == "1.2", "ipa version");
 Check(ipa.MinOs == "16.0", "ipa min os");
 
+// writer roundtrip
+var round = new Dictionary<string, object?> { ["A"] = "x", ["N"] = (long)7, ["B"] = true, ["L"] = new List<object?> { "a", (long)1 } };
+var back = PlistParser.Parse(PlistWriter.WriteXml(round));
+Check((string)back["A"]! == "x", "writer roundtrip string");
+Check((long)back["N"]! == 7, "writer roundtrip int");
+Check((bool)back["B"]! == true, "writer roundtrip bool");
+Check(((List<object?>)back["L"]!).Count == 2, "writer roundtrip array");
+
+// clone
+var clone = IpaCustomizer.CloneIpa(@"D:\SideLoadr\tests\test.ipa", "com.test.app.clone", "TestApp 2");
+IpaInfo cloned = IpaReader.Read(clone.Path);
+Check(cloned.BundleId == "com.test.app.clone", "clone bundle id");
+Check(cloned.BundleName == "TestApp 2", "clone name");
+Check(clone.Path.Contains("-clone"), "clone filename");
+File.Delete(clone.Path);
+
+// clone defaults
+var cloneAuto = IpaCustomizer.CloneIpa(@"D:\SideLoadr\tests\test.ipa", "", "");
+IpaInfo clonedAuto = IpaReader.Read(cloneAuto.Path);
+Check(clonedAuto.BundleId == "com.test.app.clone", "clone auto bundle id");
+Check(clonedAuto.BundleName == "TestApp 2", "clone auto name");
+File.Delete(cloneAuto.Path);
+
+// bad bundle id
+bool threw = false;
+try { IpaCustomizer.CloneIpa(@"D:\SideLoadr\tests\test.ipa", "bad id!", null); }
+catch (InvalidDataException) { threw = true; }
+Check(threw, "clone rejects bad bundle id");
+
+// rename only
+var ren = IpaCustomizer.CustomizeIpa(@"D:\SideLoadr\tests\test.ipa", null, "Renamed", null);
+Check(IpaReader.Read(ren.Path).BundleName == "Renamed", "customize rename");
+Check(IpaReader.Read(ren.Path).BundleId == "com.test.app", "customize keeps id");
+File.Delete(ren.Path);
+
+// icon swap
+var icon = IpaCustomizer.CustomizeIpa(@"D:\SideLoadr\tests\test-icon.ipa", null, null, @"D:\SideLoadr\tests\newicon.png");
+using (var zip = System.IO.Compression.ZipFile.OpenRead(icon.Path))
+{
+    var e2 = zip.GetEntry("Payload/IconApp.app/AppIcon60x60@2x.png")!;
+    using var s = e2.Open();
+    using var ms = new MemoryStream();
+    s.CopyTo(ms);
+    Check(ms.ToArray().SequenceEqual(File.ReadAllBytes(@"D:\SideLoadr\tests\newicon.png")), "icon 2x replaced");
+    var e3 = zip.GetEntry("Payload/IconApp.app/AppIcon60x60@3x.png")!;
+    using var s3 = e3.Open();
+    using var ms3 = new MemoryStream();
+    s3.CopyTo(ms3);
+    Check(ms3.ToArray().SequenceEqual(File.ReadAllBytes(@"D:\SideLoadr\tests\newicon.png")), "icon 3x replaced");
+}
+Check(icon.Notes.Any(n => n.StartsWith("icon replaced:")), "icon notes logged");
+File.Delete(icon.Path);
+
+// update check logic
+Check(UpdateService.IsNewer("v0.3.0", "0.2.0"), "update newer");
+Check(!UpdateService.IsNewer("v0.2.0", "0.2.0"), "update same");
+Check(!UpdateService.IsNewer("v0.1.0", "0.2.0"), "update older");
+
 Console.WriteLine(failures == 0 ? "ALL OK" : $"{failures} FAILURES");
 return failures;

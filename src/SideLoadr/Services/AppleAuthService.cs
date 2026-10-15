@@ -21,11 +21,12 @@ public sealed class AppleAuthService(HttpClient http, string anisetteServerUrl)
 {
     private static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
 
-    /// <summary>Fetches anisette data without logging in — used by the Test button.</summary>
-    public static async Task<Dictionary<string, string>> FetchAnisetteAsync(string serverUrl, CancellationToken ct)
+    /// <summary>Fetches anisette data without logging in — used by the Test button.
+    /// Supports several servers separated by ';' (first success wins).</summary>
+    public static async Task<(Dictionary<string, string> Data, string ServerUrl)> FetchAnisetteAsync(string serverUrls, CancellationToken ct)
     {
         using var http = new HttpClient();
-        return await new AppleAuthService(http, serverUrl).GetAnisetteDataAsync(ct);
+        return await new AppleAuthService(http, serverUrls).GetAnisetteDataAsync(ct);
     }
 
     public async Task<AppleSession> LoginAsync(
@@ -43,8 +44,8 @@ public sealed class AppleAuthService(HttpClient http, string anisetteServerUrl)
                 "anisette provisioning data, which can only be generated with Apple hardware.");
 
         log("Fetching anisette provisioning data...");
-        Dictionary<string, string> anisette = await GetAnisetteDataAsync(ct);
-        log("Anisette OK.");
+        var (anisette, anisetteServer) = await GetAnisetteDataAsync(ct);
+        log($"Anisette OK ({anisetteServer}).");
 
         log("Signing in to Apple ID...");
         using var signin = new HttpRequestMessage(HttpMethod.Post, "https://idmsa.apple.com/appleauth/auth/signin");
@@ -74,48 +75,46 @@ public sealed class AppleAuthService(HttpClient http, string anisetteServerUrl)
         return session;
     }
 
-    private async Task<Dictionary<string, string>> GetAnisetteDataAsync(CancellationToken ct)
+    private async Task<(Dictionary<string, string> Data, string ServerUrl)> GetAnisetteDataAsync(CancellationToken ct)
     {
-        // Different anisette servers expose the data at different paths
-        // (e.g. "/anisette" vs the server root). Try both, first success wins.
-        string baseUrl = anisetteServerUrl.TrimEnd('/');
-        string[] candidates = baseUrl.EndsWith("/anisette", StringComparison.OrdinalIgnoreCase)
-            ? new[] { baseUrl }
-            : new[] { baseUrl + "/anisette", baseUrl };
+        // Several servers may be configured, separated by ';'. Different servers
+        // also expose the data at different paths ("/anisette" vs server root).
+        // First success wins; failures are aggregated into the error.
+        var servers = anisetteServerUrl.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (servers.Length == 0)
+            servers = new[] { anisetteServerUrl };
         var errors = new List<string>();
-        foreach (string url in candidates)
+        foreach (string server in servers)
         {
-            try
+            string baseUrl = server.TrimEnd('/');
+            string[] candidates = baseUrl.EndsWith("/anisette", StringComparison.OrdinalIgnoreCase)
+                ? new[] { baseUrl }
+                : new[] { baseUrl + "/anisette", baseUrl };
+            foreach (string url in candidates)
             {
-                using var resp = await http.GetAsync(url, ct);
-                string body = await resp.Content.ReadAsStringAsync(ct);
-                if (!resp.IsSuccessStatusCode)
+                try
                 {
-                    errors.Add($"{url} -> {(int)resp.StatusCode}");
-                    continue;
+                    using var resp = await http.GetAsync(url, ct);
+                    string body = await resp.Content.ReadAsStringAsync(ct);
+                    if (!resp.IsSuccessStatusCode)
+                    {
+                        errors.Add($"{url} -> {(int)resp.StatusCode}");
+                        continue;
+                    }
+                    var data = JsonSerializer.Deserialize<Dictionary<string, string>>(body, Json);
+                    if (data is { Count: > 0 })
+                        return (data, server);
+                    errors.Add($"{url} -> empty/unexpected JSON");
                 }
-                var data = JsonSerializer.Deserialize<Dictionary<string, string>>(body, Json);
-                if (data is { Count: > 0 })
+                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
                 {
-                    LogKeysIfVerbose(data);
-                    return data;
+                    errors.Add($"{url} -> {ex.Message}");
                 }
-                errors.Add($"{url} -> empty/unexpected JSON");
-            }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
-            {
-                errors.Add($"{url} -> {ex.Message}");
             }
         }
         throw new InvalidOperationException(
-            "Anisette server gave no usable data (" + string.Join("; ", errors) +
-            "). Check the URL or run your own anisette server (see README).");
-    }
-
-    private static void LogKeysIfVerbose(Dictionary<string, string> data)
-    {
-        // Keys are logged by the caller flow; kept separate for future diagnostics.
-        _ = data.Count;
+            "No anisette server gave usable data (" + string.Join("; ", errors) +
+            "). Check the URL(s) or run your own anisette server (see README).");
     }
 
     private async Task Submit2faCodeAsync(string appleId, string code, Dictionary<string, string> anisette, Action<string> log, CancellationToken ct)
