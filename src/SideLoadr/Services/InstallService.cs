@@ -57,8 +57,8 @@ public static class InstallService
             }
             catch (Exception ex)
             {
-                results.Add(new BatchResult(path, "?", false, "unreadable IPA: " + ex.Message));
-                log($"SKIP {Path.GetFileName(path)}: not a valid IPA.");
+                results.Add(new BatchResult(path, "?", false, "unreadable app file: " + ex.Message));
+                log($"SKIP {Path.GetFileName(path)}: not a valid app file.");
                 continue;
             }
             try

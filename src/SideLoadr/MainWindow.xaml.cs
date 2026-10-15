@@ -105,14 +105,14 @@ public partial class MainWindow : Window
             IpaPathBox.Text = path;
             IpaInfoLabel.Text = $"{_ipa.BundleName} v{_ipa.Version} — {_ipa.BundleId}" +
                 (_ipa.MinOs is null ? "" : $" — needs iOS {_ipa.MinOs}+");
-            Log($"Loaded IPA: {_ipa.BundleName} ({_ipa.BundleId}).");
+            Log($"Loaded app: {_ipa.BundleName} ({_ipa.BundleId}).");
         }
         catch (Exception ex)
         {
             _ipa = null;
             IpaPathBox.Text = "";
-            IpaInfoLabel.Text = "Could not read IPA.";
-            Log("IPA error: " + ex.Message, isError: true);
+            IpaInfoLabel.Text = "Could not read that app file.";
+            Log("App file error: " + ex.Message, isError: true);
         }
     }
 
@@ -181,19 +181,19 @@ public partial class MainWindow : Window
     {
         if (_ipa is null)
         {
-            Log("Pick an IPA first.", isError: true);
+            Log("Pick an app file first.", isError: true);
             return;
         }
         try
         {
             var result = IpaCustomizer.CloneIpa(_ipa.FilePath, NewBundleIdBox.Text, NewNameBox.Text);
             foreach (string note in result.Notes)
-                Log("Clone: " + note);
+                Log("Copy: " + note);
             SetIpa(result.Path);
         }
         catch (Exception ex)
         {
-            Log("Clone failed: " + ex.Message, isError: true);
+            Log("Copy failed: " + ex.Message, isError: true);
         }
     }
 
@@ -201,7 +201,7 @@ public partial class MainWindow : Window
     {
         if (_ipa is null)
         {
-            Log("Pick an IPA first.", isError: true);
+            Log("Pick an app file first.", isError: true);
             return;
         }
         try
@@ -209,12 +209,12 @@ public partial class MainWindow : Window
             var result = IpaCustomizer.CustomizeIpa(_ipa.FilePath, NewBundleIdBox.Text, NewNameBox.Text,
                 string.IsNullOrWhiteSpace(IconPathBox.Text) ? null : IconPathBox.Text);
             foreach (string note in result.Notes)
-                Log("Customize: " + note);
+                Log("Edit: " + note);
             SetIpa(result.Path);
         }
         catch (Exception ex)
         {
-            Log("Customize failed: " + ex.Message, isError: true);
+            Log("Edit failed: " + ex.Message, isError: true);
         }
     }
 
@@ -412,7 +412,7 @@ public partial class MainWindow : Window
     {
         if (_ipa is null)
         {
-            Log("Pick an IPA first.", isError: true);
+            Log("Pick an app file first.", isError: true);
             return;
         }
         if (string.IsNullOrWhiteSpace(DylibPathBox.Text))
@@ -439,7 +439,7 @@ public partial class MainWindow : Window
     {
         if (_ipa is null)
         {
-            Log("Pick an IPA first.", isError: true);
+            Log("Pick an app file first.", isError: true);
             return;
         }
         try
@@ -454,12 +454,12 @@ public partial class MainWindow : Window
                 MinOs: string.IsNullOrWhiteSpace(MinOsBox.Text) ? null : MinOsBox.Text.Trim());
             var result = IpaCustomizer.Supercharge(_ipa.FilePath, opts);
             foreach (string note in result.Notes)
-                Log("God mode: " + note);
+                Log("Makeover: " + note);
             SetIpa(result.Path);
         }
         catch (Exception ex)
         {
-            Log("Supercharge failed: " + ex.Message, isError: true);
+            Log("Makeover failed: " + ex.Message, isError: true);
         }
     }
 
@@ -481,7 +481,7 @@ public partial class MainWindow : Window
     {
         if (_ipa is null)
         {
-            Log("Pick an IPA first.", isError: true);
+            Log("Pick an app file first.", isError: true);
             return;
         }
         string appleId = AppleIdBox.Text.Trim();
@@ -531,7 +531,7 @@ public partial class MainWindow : Window
     {
         if (_ipa is null)
         {
-            Log("Pick an IPA first (must already be signed).", isError: true);
+            Log("Pick an app file first (it must already be signed).", isError: true);
             return;
         }
         await RunGuardedAsync("install", async (log, ct) =>

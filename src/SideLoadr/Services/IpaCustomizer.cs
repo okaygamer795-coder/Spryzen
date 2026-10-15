@@ -91,7 +91,7 @@ public static class IpaCustomizer
         var notes = new List<string>();
         using var src = ZipFile.OpenRead(srcPath);
         var plistEntry = src.Entries.FirstOrDefault(e => IsAppPlist(e.FullName))
-            ?? throw new InvalidDataException("No Payload/*.app/Info.plist found — not a valid IPA.");
+            ?? throw new InvalidDataException("No Payload/*.app/Info.plist found — not a valid app file.");
         string plistName = plistEntry.FullName;
         string appDir = plistName[..^"Info.plist".Length];
 
@@ -179,7 +179,7 @@ public static class IpaCustomizer
 
         using var src = ZipFile.OpenRead(srcPath);
         var plistEntry = src.Entries.FirstOrDefault(en => IsAppPlist(en.FullName))
-            ?? throw new InvalidDataException("No Payload/*.app/Info.plist found — not a valid IPA.");
+            ?? throw new InvalidDataException("No Payload/*.app/Info.plist found — not a valid app file.");
         string appDir = plistEntry.FullName[..^"Info.plist".Length];
 
         string? exeEntryName = null;
@@ -191,7 +191,7 @@ public static class IpaCustomizer
             !en.FullName.EndsWith('/') &&
             Path.GetFileName(en.FullName).IndexOf('.') < 0)?.FullName;
         if (exeEntryName is null)
-            throw new InvalidDataException("Could not find the main executable in this IPA.");
+            throw new InvalidDataException("Could not find the main executable in this app file.");
 
         byte[] exeBytes;
         using (var s = src.GetEntry(exeEntryName)!.Open())
@@ -277,7 +277,7 @@ public static class IpaCustomizer
 
         using var src = ZipFile.OpenRead(srcPath);
         var plistEntry = src.Entries.FirstOrDefault(en => IsAppPlist(en.FullName))
-            ?? throw new InvalidDataException("No Payload/*.app/Info.plist found — not a valid IPA.");
+            ?? throw new InvalidDataException("No Payload/*.app/Info.plist found — not a valid app file.");
         string appDir = plistEntry.FullName[..^"Info.plist".Length];
         string plistName = plistEntry.FullName;
 
@@ -292,7 +292,7 @@ public static class IpaCustomizer
                 !en.FullName.EndsWith('/') &&
                 Path.GetFileName(en.FullName).IndexOf('.') < 0)?.FullName;
             if (exeEntryName is null)
-                throw new InvalidDataException("Could not find the main executable in this IPA.");
+                throw new InvalidDataException("Could not find the main executable in this app file.");
         }
         byte[]? exeBytes = null;
         if (exeEntryName is not null)

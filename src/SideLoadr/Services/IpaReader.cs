@@ -26,11 +26,11 @@ public static class IpaReader
     public static Dictionary<string, object?> ReadPlist(string ipaPath)
     {
         if (!File.Exists(ipaPath))
-            throw new FileNotFoundException("IPA not found.", ipaPath);
+            throw new FileNotFoundException("App file not found.", ipaPath);
 
         using var zip = ZipFile.OpenRead(ipaPath);
         var entry = zip.Entries.FirstOrDefault(e => IsAppPlist(e.FullName))
-            ?? throw new InvalidDataException("No Payload/*.app/Info.plist found — not a valid IPA.");
+            ?? throw new InvalidDataException("No Payload/*.app/Info.plist found — not a valid app file.");
 
         using var s = entry.Open();
         using var ms = new MemoryStream();

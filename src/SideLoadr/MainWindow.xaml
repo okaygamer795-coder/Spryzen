@@ -91,9 +91,9 @@
                 <DockPanel Margin="0,0,0,4">
                     <StackPanel>
                         <TextBlock Text="SideLoadr" FontSize="24" FontWeight="Bold" Foreground="White"/>
-                        <TextBlock Text="Sideload IPAs with a free Apple ID — drag &amp; drop an .ipa anywhere" Style="{StaticResource Hint}"/>
+                        <TextBlock Text="Sideload iPhone apps with a free Apple ID — 1 pick the app, 2 connect the iPhone, 3 sign in, 4 install. Drag &amp; drop an .ipa anywhere." Style="{StaticResource Hint}"/>
                     </StackPanel>
-                    <TextBlock Text="v0.6.0" DockPanel.Dock="Right" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
+                    <TextBlock Text="v0.6.1" DockPanel.Dock="Right" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
                 </DockPanel>
                 <TextBlock Name="DriverStatusLabel" Text="Checking drivers…" Style="{StaticResource Hint}" Margin="0,0,0,10"/>
                 <TextBlock Name="ToolsStatusLabel" Text="" Style="{StaticResource Hint}" Margin="0,0,0,10"/>
@@ -101,19 +101,19 @@
                 <!-- 1. IPA -->
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="1 · IPA file" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="1 · App file (your iPhone app, ends in .ipa)" Style="{StaticResource CardTitle}"/>
                         <DockPanel>
                             <Button Name="BrowseButton" Content="Browse…" Style="{StaticResource Btn}" Width="90" DockPanel.Dock="Right" Margin="8,0,0,0" Click="Browse_Click"/>
                             <TextBox Name="IpaPathBox" IsReadOnly="True" VerticalContentAlignment="Center"/>
                         </DockPanel>
-                        <TextBlock Name="IpaInfoLabel" Text="No IPA selected." Style="{StaticResource Hint}" Margin="0,6,0,0"/>
+                        <TextBlock Name="IpaInfoLabel" Text="No app selected yet." Style="{StaticResource Hint}" Margin="0,6,0,0"/>
                     </StackPanel>
                 </Border>
 
                 <!-- 2. device -->
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="2 · Device (USB, trust this PC on the iPhone)" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="2 · Your iPhone / iPad (plug in with USB, tap Trust on the phone)" Style="{StaticResource CardTitle}"/>
                         <DockPanel>
                             <Button Name="RefreshButton" Content="Refresh" Style="{StaticResource Btn}" Width="90" DockPanel.Dock="Right" Margin="8,0,0,0" Click="Refresh_Click"/>
                             <ComboBox Name="DeviceBox" DisplayMemberPath="Name" VerticalContentAlignment="Center"/>
@@ -144,7 +144,7 @@
                                 <TextBox Name="TwoFactorBox" VerticalContentAlignment="Center"/>
                             </StackPanel>
                         </Grid>
-                        <TextBlock Text="Anisette server (pre-filled public default — replace with your own if it fails)" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
+                        <TextBlock Text="Anisette helper for signing (pre-filled public one — only change it if signing stops working)" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
                         <DockPanel Margin="0,4,0,0">
                             <Button Name="DefaultAnisetteButton" Content="Default" Style="{StaticResource Btn}" Width="80" DockPanel.Dock="Right" Margin="8,0,0,0" Click="DefaultAnisette_Click"/>
                             <Button Name="TestAnisetteButton" Content="Test" Style="{StaticResource Btn}" Width="80" DockPanel.Dock="Right" Margin="8,0,0,0" Click="TestAnisette_Click"/>
@@ -156,14 +156,14 @@
 
                 <!-- actions -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                    <Button Name="SignInstallButton" Content="Sign with free Apple ID + Install (7-day)" Style="{StaticResource PrimaryBtn}" Click="SignInstall_Click"/>
-                    <Button Name="InstallSignedButton" Content="Install already-signed IPA" Style="{StaticResource Btn}" Click="InstallSigned_Click"/>
+                    <Button Name="SignInstallButton" Content="Sign in + Install (free, lasts 7 days)" Style="{StaticResource PrimaryBtn}" Click="SignInstall_Click"/>
+                    <Button Name="InstallSignedButton" Content="Install already-signed app" Style="{StaticResource Btn}" Click="InstallSigned_Click"/>
                 </StackPanel>
 
                 <!-- 4. power tools -->
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="4 · Power tools (work on the selected IPA, no device needed except installs)" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="4 · App editor (rename, copy, change icon — works without the iPhone)" Style="{StaticResource CardTitle}"/>
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -171,7 +171,7 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Margin="0,0,8,0">
-                                <TextBlock Text="New bundle ID (blank = auto .clone)" Style="{StaticResource Hint}"/>
+                                <TextBlock Text="New app ID (blank = automatic)" Style="{StaticResource Hint}"/>
                                 <TextBox Name="NewBundleIdBox" VerticalContentAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Margin="0,0,8,0">
@@ -187,11 +187,11 @@
                             </StackPanel>
                         </Grid>
                         <WrapPanel>
-                            <Button Name="CloneButton" Content="Clone selected IPA" Style="{StaticResource Btn}" Click="Clone_Click"/>
-                            <Button Name="CustomizeButton" Content="Apply name/ID/icon" Style="{StaticResource Btn}" Click="Customize_Click"/>
-                            <Button Name="BatchButton" Content="Batch install (signed)" Style="{StaticResource Btn}" Click="Batch_Click"/>
-                            <Button Name="RefreshAllButton" Content="Refresh all expiring" Style="{StaticResource Btn}" Click="RefreshAll_Click"/>
-                            <Button Name="AppIdsButton" Content="List my App IDs" Style="{StaticResource Btn}" Click="AppIds_Click"/>
+                            <Button Name="CloneButton" Content="Make a copy (dual install)" Style="{StaticResource Btn}" Click="Clone_Click"/>
+                            <Button Name="CustomizeButton" Content="Apply changes" Style="{StaticResource Btn}" Click="Customize_Click"/>
+                            <Button Name="BatchButton" Content="Install several apps" Style="{StaticResource Btn}" Click="Batch_Click"/>
+                            <Button Name="RefreshAllButton" Content="Renew everything expiring" Style="{StaticResource Btn}" Click="RefreshAll_Click"/>
+                            <Button Name="AppIdsButton" Content="Show my used app slots" Style="{StaticResource Btn}" Click="AppIds_Click"/>
                             <Button Name="UpdateButton" Content="Check updates" Style="{StaticResource Btn}" Click="Update_Click"/>
                         </WrapPanel>
                     </StackPanel>
@@ -200,7 +200,7 @@
                 <!-- 5. pairing, auto-folder, keep-alive -->
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="5 · Pairing, auto-folder &amp; keep-alive" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="5 · Extras: pairing, auto-install folder &amp; auto-refresh" Style="{StaticResource CardTitle}"/>
                         <TextBlock Text="Pairing (first time per device — trust dialog appears on the iPhone)" Style="{StaticResource Hint}"/>
                         <WrapPanel Margin="0,4,0,8">
                             <Button Name="PairButton" Content="Pair device" Style="{StaticResource Btn}" Click="Pair_Click"/>
@@ -230,20 +230,20 @@
                 <!-- 6. tweak injection -->
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="6 · Tweak injection (inserts a .dylib into the app — re-sign afterwards)" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="6 · Add a tweak to the app (.dylib file — re-sign afterwards)" Style="{StaticResource CardTitle}"/>
                         <DockPanel>
                             <Button Name="InjectButton" Content="Inject into selected IPA" Style="{StaticResource Btn}" Width="170" DockPanel.Dock="Right" Margin="8,0,0,0" Click="Inject_Click"/>
                             <Button Name="DylibBrowseButton" Content="…" Style="{StaticResource Btn}" Width="34" DockPanel.Dock="Right" Margin="8,0,0,0" Click="DylibBrowse_Click"/>
                             <TextBox Name="DylibPathBox" IsReadOnly="True" VerticalContentAlignment="Center"/>
                         </DockPanel>
-                        <TextBlock Text="Refuses App Store-encrypted binaries (decrypt on a jailbroken device first). Output must be signed before install." Style="{StaticResource Hint}" Margin="0,6,0,0"/>
+                        <TextBlock Text="Tweaks are real code: only use .dylib files from sources you trust. Refuses App Store-encrypted apps (those must be decrypted on a jailbroken device first). Output must be signed before install." Style="{StaticResource Hint}" Margin="0,6,0,0"/>
                     </StackPanel>
                 </Border>
 
-                <!-- 7. god mode -->
+                <!-- 7. app makeover -->
                 <Border Style="{StaticResource Card}" BorderBrush="#007ACC" BorderThickness="2">
                     <StackPanel>
-                        <TextBlock Text="7 · GOD MODE — everything at once (uses the boxes above)" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="7 · App Makeover — everything at once (uses the boxes above)" Style="{StaticResource CardTitle}"/>
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="150"/>
@@ -261,7 +261,8 @@
                                 <CheckBox Name="SharingCheck" Content="Enable file sharing (browse app data)" IsChecked="True" Foreground="#E0E0E0"/>
                             </StackPanel>
                         </Grid>
-                        <Button Name="SuperchargeButton" Content="⚡ SUPERCHARGE selected IPA" Style="{StaticResource PrimaryBtn}" HorizontalAlignment="Left" Click="Supercharge_Click"/>
+                        <Button Name="SuperchargeButton" Content="✨ Makeover selected app" Style="{StaticResource PrimaryBtn}" HorizontalAlignment="Left" Click="Supercharge_Click"/>
+                        <TextBlock Text="Safe to try: makes a new file, your original is never changed. Lowering the iOS version too far can make an app crash on old devices — when in doubt, leave it at 14.0." Style="{StaticResource Hint}" Margin="0,6,0,0"/>
                     </StackPanel>
                 </Border>
 
