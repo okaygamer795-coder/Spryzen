@@ -1,5 +1,7 @@
 # SideLoadr + Spryzen — sideload IPA files with a free Apple ID
 
+<p align="center"><img src="assets/spryzen-icon-1024.png" width="160" alt="Spryzen logo"></p>
+
 **New here? Pick your path (2 minutes):**
 
 - 🖥️ **Windows user — get the PC app:** go to **Releases**,
