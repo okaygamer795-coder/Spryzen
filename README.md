@@ -1,4 +1,22 @@
-# SideLoadr — sideload IPA files from Windows
+# SideLoadr + Spryzen — sideload IPA files with a free Apple ID
+
+**New here? Pick your path (2 minutes):**
+
+- 🖥️ **Windows user — get the PC app:** go to **Releases**,
+  download `SideLoadr-vX-win-x64.exe` (or the `.zip` if your browser blocks it),
+  double-click to run. No install needed. On first start it checks for helper
+  tools and offers the Beginner guide. Details below under "Install from GitHub".
+- 📱 **iPhone user — get Spryzen:** go to **Releases → "Spryzen for iPhone
+  (unsigned)"**, download the IPA, then sign + install it with the PC app
+  (drag it in, Apple ID, big blue button). Afterwards Spryzen manages your apps
+  on-device; point it at the PC helper (`http://PC-IP:8765`, started in Extras).
+- 🛠️ **Developer:** `src/` (WPF, .NET 8), `spryzen-ios/` (SwiftUI, XcodeGen),
+  `tests/` (40+ checks). Every Mac CI run uploads a fresh unsigned Spryzen IPA.
+
+Free Apple ID rules (Apple's, for everyone): ~3 apps, ~10 IDs, **7-day
+certificates** — re-sign to renew. SideLoadr tracks expiry and can auto-renew daily.
+
+---
 
 WPF desktop app (.NET 8) that signs IPAs with a **free Apple ID** (7-day certificate,
 like AltStore/Sideloadly) and installs them on a connected iPhone/iPad over USB.
