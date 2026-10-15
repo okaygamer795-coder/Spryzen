@@ -19,11 +19,12 @@ final class LibraryStore: ObservableObject {
         apps = decoded.sorted { $0.expiresAt < $1.expiresAt }
     }
 
-    func recordInstalled(bundleID: String, name: String, udid: String) {
+    func recordInstalled(bundleID: String, name: String, udid: String, ipaPath: String = "") {
         apps.removeAll { $0.bundleID == bundleID && $0.udid == udid }
         let now = Date()
         apps.append(SideloadedApp(bundleID: bundleID, name: name, udid: udid,
-                                  installedAt: now, expiresAt: now.addingTimeInterval(7 * 86400)))
+                                  installedAt: now, expiresAt: now.addingTimeInterval(7 * 86400),
+                                  ipaPath: ipaPath))
         save()
     }
 
