@@ -46,3 +46,46 @@ jobs:
         with:
           name: Spryzen-unsigned
           path: spryzen-ios/Spryzen-unsigned.ipa
+
+  shots:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: spryzen-ios
+        run: xcodegen generate
+
+      - name: Build for simulator
+        working-directory: spryzen-ios
+        run: >
+          xcodebuild
+          -project Spryzen.xcodeproj
+          -scheme Spryzen
+          -configuration Debug
+          -destination 'platform=iOS Simulator,name=iPhone 16'
+          -derivedDataPath build/derived
+          build
+          CODE_SIGNING_ALLOWED=NO
+
+      - name: Boot simulator and capture
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(dev['udid'] for rt in sorted(d) for dev in d[rt] if dev.get('isAvailable', dev.get('availability') == '(available)') and dev['name'].startswith('iPhone')))")
+          echo "Using simulator $UDID"
+          xcrun simctl boot "$UDID"
+          APP=$(find spryzen-ios/build/derived/Build/Products/Debug-iphonesimulator -name "Spryzen.app" -maxdepth 2 | head -1)
+          echo "App at $APP"
+          xcrun simctl install "$UDID" "$APP"
+          xcrun simctl launch "$UDID" com.spryzen.app
+          sleep 6
+          xcrun simctl io "$UDID" screenshot spryzen-ios/spryzen-library.png
+          xcrun simctl shutdown "$UDID"
+
+      - name: Upload screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spryzen-shots
+          path: spryzen-ios/spryzen-library.png
