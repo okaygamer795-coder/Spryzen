@@ -41,6 +41,10 @@ jobs:
           cp -r build/Spryzen.xcarchive/Products/Applications/Spryzen.app Payload/
           zip -r Spryzen-unsigned.ipa Payload
 
+      - name: Verify launch screen (fails the build if iOS would letterbox)
+        working-directory: spryzen-ios
+        run: python3 -c "import plistlib; d=plistlib.load(open('build/Spryzen.xcarchive/Products/Applications/Spryzen.app/Info.plist','rb')); assert d.get('UILaunchStoryboardName')=='LaunchScreen', dict(d); print('launch OK')"
+
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:

@@ -24,3 +24,4 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.spryzen.app
       INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: false
+      INFOPLIST_KEY_UILaunchStoryboardName: LaunchScreen
