@@ -95,7 +95,7 @@
                     </StackPanel>
                     <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Orientation="Horizontal">
                         <Button Name="GuideButton" Content="📖 Beginner guide" Style="{StaticResource Btn}" Click="Guide_Click"/>
-                        <TextBlock Text="v0.6.2" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
+                        <TextBlock Text="v0.6.3" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
                     </StackPanel>
                 </DockPanel>
                 <TextBlock Name="DriverStatusLabel" Text="Checking drivers…" Style="{StaticResource Hint}" Margin="0,0,0,10"/>

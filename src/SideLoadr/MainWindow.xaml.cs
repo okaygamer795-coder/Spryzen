@@ -57,6 +57,25 @@ public partial class MainWindow : Window
             Log("Loaded remembered credentials.");
         }
         _ = UpdateKeepAliveStatusAsync();
+        CheckHelperTools();
+    }
+
+    /// <summary>Beginner safety net: if the helper tools are missing, offer the guide once.</summary>
+    private void CheckHelperTools()
+    {
+        bool hasInstaller = DeviceService.FindTool("ideviceinstaller.exe") is not null;
+        bool hasZsign = DeviceService.FindTool("zsign.exe") is not null;
+        if (hasInstaller && hasZsign)
+            return;
+        Log("Helper tools missing — installs and signing need them (see tools folder / README).", isError: true);
+        var answer = MessageBox.Show(
+            "SideLoadr needs helper tools to install and sign apps:\n\n" +
+            (hasInstaller ? "" : "• ideviceinstaller.exe (installing) — MISSING\n") +
+            (hasZsign ? "" : "• zsign.exe (signing) — MISSING\n") +
+            "\nOpen the Beginner guide to set them up?",
+            "Setup needed", MessageBoxButton.YesNo, MessageBoxImage.Information);
+        if (answer == MessageBoxResult.Yes)
+            new GuideWindow { Owner = this }.Show();
     }
 
     // ---------- logging ----------

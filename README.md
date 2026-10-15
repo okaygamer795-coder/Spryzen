@@ -3,6 +3,16 @@
 WPF desktop app (.NET 8) that signs IPAs with a **free Apple ID** (7-day certificate,
 like AltStore/Sideloadly) and installs them on a connected iPhone/iPad over USB.
 
+## Install from GitHub (no setup program — just run it)
+
+1. Go to **Releases** and download `SideLoadr-vX-win-x64.exe` from **Assets**
+   (not the "Source code" zip — that is for developers).
+   A `.zip` with the same exe is attached too if your browser blocks the raw exe.
+2. Double-click the exe. If Windows SmartScreen says it protected your PC,
+   click **More info → Run anyway** (the app is unsigned, so Windows asks once).
+3. On first start it checks for the helper tools and offers the Beginner guide
+   if anything is missing.
+
 ## What works today
 
 - **IPA inspection** — drag & drop an `.ipa`, reads bundle ID / name / version /

@@ -62,6 +62,8 @@
             <ScrollViewer Padding="12">
                 <StackPanel>
                     <TextBlock Style="{StaticResource H}" Text="If you see this… do that"/>
+                    <TextBlock Style="{StaticResource B}" Text="“Downloaded SideLoadr from GitHub and it won't start”"/>
+                    <TextBlock Style="{StaticResource Fix}" Text="Grab the SideLoadr-vX-win-x64.exe file under Assets (not the Source code zip — that is for developers). No install needed: just double-click the .exe. If Windows SmartScreen says it protected your PC, click More info, then Run anyway — the app is unsigned, so Windows asks once."/>
                     <TextBlock Style="{StaticResource B}" Text="“No iOS device found”"/>
                     <TextBlock Style="{StaticResource Fix}" Text="Use a data USB cable (some cables charge only), tap Trust on the phone, make sure Apple Devices/iTunes is installed, press Refresh."/>
                     <TextBlock Style="{StaticResource B}" Text="“ideviceinstaller.exe / zsign.exe not found”"/>

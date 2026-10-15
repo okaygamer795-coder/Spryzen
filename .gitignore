@@ -9,4 +9,6 @@ packages/
 tools/*.exe
 tools/dotnet-install.ps1
 tools/localproxy.py
+SideLoadr-*.exe
+SideLoadr-*.zip
 .DS_Store
