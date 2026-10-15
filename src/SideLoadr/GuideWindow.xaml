@@ -1,0 +1,81 @@
+<Window x:Class="SideLoadr.GuideWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SideLoadr — Beginner guide" Height="560" Width="680"
+        Background="#1E1E1E" Foreground="#E0E0E0">
+    <Window.Resources>
+        <Style x:Key="H" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Margin" Value="0,10,0,4"/>
+        </Style>
+        <Style x:Key="B" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#D0D0D0"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style x:Key="Fix" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#9E9E9E"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="12,0,0,8"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+    </Window.Resources>
+    <TabControl Background="#1E1E1E" Foreground="#E0E0E0" Margin="8">
+        <TabItem Header="Start here">
+            <ScrollViewer Padding="12">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource H}" Text="Sideload your first app in 5 steps"/>
+                    <TextBlock Style="{StaticResource B}" Text="1. Get an .ipa file — that is the iPhone app itself. Put it anywhere, then drag it into SideLoadr (or Browse)."/>
+                    <TextBlock Style="{StaticResource B}" Text="2. Install Apple Devices (Microsoft Store) or iTunes — this installs the iPhone drivers. Plug in with USB and tap Trust on the phone."/>
+                    <TextBlock Style="{StaticResource B}" Text="3. Add the helper tools: idevice_id.exe, ideviceinstaller.exe (for installing) and zsign.exe (for signing) go into the tools folder next to SideLoadr.exe. The log tells you exactly which one is missing."/>
+                    <TextBlock Style="{StaticResource B}" Text="4. In SideLoadr: press Refresh, pick your iPhone, type your Apple ID + password, press the big blue button. First time on a device, use Pair device."/>
+                    <TextBlock Style="{StaticResource B}" Text="5. If Apple asks for a 2FA code: approve the login on a trusted device, type the 6-digit code into the 2FA box, and press the button again."/>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+        <TabItem Header="The 7-day rule">
+            <ScrollViewer Padding="12">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource H}" Text="Free Apple IDs expire every 7 days"/>
+                    <TextBlock Style="{StaticResource B}" Text="Apps signed with a free Apple ID stop opening after 7 days. This is Apple's rule, every tool works the same way. Just sign + install again to renew."/>
+                    <TextBlock Style="{StaticResource B}" Text="SideLoadr tracks every install and warns you when 2 or fewer days are left. 'Renew everything expiring' does them all at once."/>
+                    <TextBlock Style="{StaticResource B}" Text="Turn on 'Remember me' + 'Enable daily refresh' and the PC renews your apps by itself every morning (card 5)."/>
+                    <TextBlock Style="{StaticResource B}" Text="Free limits to know: about 3 sideloaded apps at a time, about 10 app IDs. 'Show my used app slots' shows your usage."/>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+        <TabItem Header="Apple ID &amp; passwords">
+            <ScrollViewer Padding="12">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource H}" Text="Signing in, safely"/>
+                    <TextBlock Style="{StaticResource B}" Text="Use your normal Apple ID and password first, plus the 2FA code when asked. Your password stays in the app's memory only and is never saved anywhere."/>
+                    <TextBlock Style="{StaticResource B}" Text="If sign-in keeps failing with 2FA on, make an app-specific password at appleid.apple.com and use that instead of your normal password."/>
+                    <TextBlock Style="{StaticResource B}" Text="'Remember me' stores the password in Windows Credential Manager (encrypted by Windows itself) so auto-refresh and the auto-folder can work without asking you every time. Untick it to forget."/>
+                    <TextBlock Style="{StaticResource B}" Text="The Anisette box is a helper service signing needs — leave the pre-filled address alone unless signing breaks, then press Test."/>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+        <TabItem Header="Fix problems">
+            <ScrollViewer Padding="12">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource H}" Text="If you see this… do that"/>
+                    <TextBlock Style="{StaticResource B}" Text="“No iOS device found”"/>
+                    <TextBlock Style="{StaticResource Fix}" Text="Use a data USB cable (some cables charge only), tap Trust on the phone, make sure Apple Devices/iTunes is installed, press Refresh."/>
+                    <TextBlock Style="{StaticResource B}" Text="“ideviceinstaller.exe / zsign.exe not found”"/>
+                    <TextBlock Style="{StaticResource Fix}" Text="Download the libimobiledevice Windows tools and a zsign Windows build, drop the .exe files into the tools folder next to SideLoadr.exe."/>
+                    <TextBlock Style="{StaticResource B}" Text="“Apple sign-in failed”"/>
+                    <TextBlock Style="{StaticResource Fix}" Text="Re-type the password carefully; approve the 2FA prompt and enter the code; or try an app-specific password from appleid.apple.com."/>
+                    <TextBlock Style="{StaticResource B}" Text="“No usable anisette data”"/>
+                    <TextBlock Style="{StaticResource Fix}" Text="The helper address may be down — press Test, try another anisette server address, or self-host one (README)."/>
+                    <TextBlock Style="{StaticResource B}" Text="“App installs but crashes when opened”"/>
+                    <TextBlock Style="{StaticResource Fix}" Text="Most likely the 7-day certificate expired — renew it. Or the minimum-iOS was lowered too far, the tweak doesn't fit that app version, or the IPA is App Store-encrypted."/>
+                    <TextBlock Style="{StaticResource B}" Text="“Inject failed: encrypted” / “No room in the header”"/>
+                    <TextBlock Style="{StaticResource Fix}" Text="That app can't take tweaks as-is: encrypted IPAs need decrypting on a jailbroken device first, and some binaries have no spare header space."/>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+    </TabControl>
+</Window>

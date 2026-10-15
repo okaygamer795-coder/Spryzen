@@ -105,14 +105,14 @@ public partial class MainWindow : Window
             IpaPathBox.Text = path;
             IpaInfoLabel.Text = $"{_ipa.BundleName} v{_ipa.Version} — {_ipa.BundleId}" +
                 (_ipa.MinOs is null ? "" : $" — needs iOS {_ipa.MinOs}+");
-            Log($"Loaded app: {_ipa.BundleName} ({_ipa.BundleId}).");
+            Log($"Loaded IPA: {_ipa.BundleName} ({_ipa.BundleId}).");
         }
         catch (Exception ex)
         {
             _ipa = null;
             IpaPathBox.Text = "";
-            IpaInfoLabel.Text = "Could not read that app file.";
-            Log("App file error: " + ex.Message, isError: true);
+            IpaInfoLabel.Text = "Could not read IPA.";
+            Log("IPA file error: " + ex.Message, isError: true);
         }
     }
 
@@ -168,6 +168,13 @@ public partial class MainWindow : Window
         });
     }
 
+    // ---------- guide ----------
+
+    private void Guide_Click(object sender, RoutedEventArgs e)
+    {
+        new GuideWindow { Owner = this }.Show();
+    }
+
     // ---------- power tools ----------
 
     private void IconBrowse_Click(object sender, RoutedEventArgs e)
@@ -181,19 +188,19 @@ public partial class MainWindow : Window
     {
         if (_ipa is null)
         {
-            Log("Pick an app file first.", isError: true);
+            Log("Pick an IPA file first.", isError: true);
             return;
         }
         try
         {
             var result = IpaCustomizer.CloneIpa(_ipa.FilePath, NewBundleIdBox.Text, NewNameBox.Text);
             foreach (string note in result.Notes)
-                Log("Copy: " + note);
+                Log("Clone: " + note);
             SetIpa(result.Path);
         }
         catch (Exception ex)
         {
-            Log("Copy failed: " + ex.Message, isError: true);
+            Log("Clone failed: " + ex.Message, isError: true);
         }
     }
 
@@ -201,7 +208,7 @@ public partial class MainWindow : Window
     {
         if (_ipa is null)
         {
-            Log("Pick an app file first.", isError: true);
+            Log("Pick an IPA file first.", isError: true);
             return;
         }
         try
@@ -209,12 +216,12 @@ public partial class MainWindow : Window
             var result = IpaCustomizer.CustomizeIpa(_ipa.FilePath, NewBundleIdBox.Text, NewNameBox.Text,
                 string.IsNullOrWhiteSpace(IconPathBox.Text) ? null : IconPathBox.Text);
             foreach (string note in result.Notes)
-                Log("Edit: " + note);
+                Log("Customize: " + note);
             SetIpa(result.Path);
         }
         catch (Exception ex)
         {
-            Log("Edit failed: " + ex.Message, isError: true);
+            Log("Customize failed: " + ex.Message, isError: true);
         }
     }
 
@@ -412,7 +419,7 @@ public partial class MainWindow : Window
     {
         if (_ipa is null)
         {
-            Log("Pick an app file first.", isError: true);
+            Log("Pick an IPA file first.", isError: true);
             return;
         }
         if (string.IsNullOrWhiteSpace(DylibPathBox.Text))
@@ -439,7 +446,7 @@ public partial class MainWindow : Window
     {
         if (_ipa is null)
         {
-            Log("Pick an app file first.", isError: true);
+            Log("Pick an IPA file first.", isError: true);
             return;
         }
         try
@@ -481,7 +488,7 @@ public partial class MainWindow : Window
     {
         if (_ipa is null)
         {
-            Log("Pick an app file first.", isError: true);
+            Log("Pick an IPA file first.", isError: true);
             return;
         }
         string appleId = AppleIdBox.Text.Trim();
@@ -531,7 +538,7 @@ public partial class MainWindow : Window
     {
         if (_ipa is null)
         {
-            Log("Pick an app file first (it must already be signed).", isError: true);
+            Log("Pick an IPA file first (it must already be signed).", isError: true);
             return;
         }
         await RunGuardedAsync("install", async (log, ct) =>

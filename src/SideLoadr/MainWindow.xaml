@@ -91,29 +91,34 @@
                 <DockPanel Margin="0,0,0,4">
                     <StackPanel>
                         <TextBlock Text="SideLoadr" FontSize="24" FontWeight="Bold" Foreground="White"/>
-                        <TextBlock Text="Sideload iPhone apps with a free Apple ID — 1 pick the app, 2 connect the iPhone, 3 sign in, 4 install. Drag &amp; drop an .ipa anywhere." Style="{StaticResource Hint}"/>
+                        <TextBlock Text="Sideload IPA files with a free Apple ID — 1 pick the file, 2 connect the iPhone, 3 sign in, 4 install. Drag &amp; drop an .ipa anywhere." Style="{StaticResource Hint}"/>
                     </StackPanel>
-                    <TextBlock Text="v0.6.1" DockPanel.Dock="Right" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
+                    <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Orientation="Horizontal">
+                        <Button Name="GuideButton" Content="📖 Beginner guide" Style="{StaticResource Btn}" Click="Guide_Click"/>
+                        <TextBlock Text="v0.6.2" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
+                    </StackPanel>
                 </DockPanel>
                 <TextBlock Name="DriverStatusLabel" Text="Checking drivers…" Style="{StaticResource Hint}" Margin="0,0,0,10"/>
                 <TextBlock Name="ToolsStatusLabel" Text="" Style="{StaticResource Hint}" Margin="0,0,0,10"/>
 
+                <TextBlock Text="SETUP — your IPA, iPhone and Apple ID" FontSize="12" FontWeight="Bold" Foreground="#007ACC" Margin="0,0,0,6"/>
+
                 <!-- 1. IPA -->
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="1 · App file (your iPhone app, ends in .ipa)" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="1 · IPA file (your iPhone app)" Style="{StaticResource CardTitle}"/>
                         <DockPanel>
                             <Button Name="BrowseButton" Content="Browse…" Style="{StaticResource Btn}" Width="90" DockPanel.Dock="Right" Margin="8,0,0,0" Click="Browse_Click"/>
                             <TextBox Name="IpaPathBox" IsReadOnly="True" VerticalContentAlignment="Center"/>
                         </DockPanel>
-                        <TextBlock Name="IpaInfoLabel" Text="No app selected yet." Style="{StaticResource Hint}" Margin="0,6,0,0"/>
+                        <TextBlock Name="IpaInfoLabel" Text="No IPA selected yet." Style="{StaticResource Hint}" Margin="0,6,0,0"/>
                     </StackPanel>
                 </Border>
 
                 <!-- 2. device -->
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="2 · Your iPhone / iPad (plug in with USB, tap Trust on the phone)" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="2 · Your iPhone / iPad (USB cable, tap Trust on the phone)" Style="{StaticResource CardTitle}"/>
                         <DockPanel>
                             <Button Name="RefreshButton" Content="Refresh" Style="{StaticResource Btn}" Width="90" DockPanel.Dock="Right" Margin="8,0,0,0" Click="Refresh_Click"/>
                             <ComboBox Name="DeviceBox" DisplayMemberPath="Name" VerticalContentAlignment="Center"/>
@@ -156,14 +161,16 @@
 
                 <!-- actions -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                    <Button Name="SignInstallButton" Content="Sign in + Install (free, lasts 7 days)" Style="{StaticResource PrimaryBtn}" Click="SignInstall_Click"/>
-                    <Button Name="InstallSignedButton" Content="Install already-signed app" Style="{StaticResource Btn}" Click="InstallSigned_Click"/>
+                    <Button Name="SignInstallButton" Content="Sign with free Apple ID + Install (7-day)" Style="{StaticResource PrimaryBtn}" Click="SignInstall_Click"/>
+                    <Button Name="InstallSignedButton" Content="Install already-signed IPA" Style="{StaticResource Btn}" Click="InstallSigned_Click"/>
                 </StackPanel>
+
+                <TextBlock Text="EDIT — change the IPA however you like (optional)" FontSize="12" FontWeight="Bold" Foreground="#007ACC" Margin="0,0,0,6"/>
 
                 <!-- 4. power tools -->
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="4 · App editor (rename, copy, change icon — works without the iPhone)" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="4 · IPA editor (rename, copy, change icon — no iPhone needed)" Style="{StaticResource CardTitle}"/>
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -187,15 +194,17 @@
                             </StackPanel>
                         </Grid>
                         <WrapPanel>
-                            <Button Name="CloneButton" Content="Make a copy (dual install)" Style="{StaticResource Btn}" Click="Clone_Click"/>
-                            <Button Name="CustomizeButton" Content="Apply changes" Style="{StaticResource Btn}" Click="Customize_Click"/>
-                            <Button Name="BatchButton" Content="Install several apps" Style="{StaticResource Btn}" Click="Batch_Click"/>
+                            <Button Name="CloneButton" Content="Clone selected IPA" Style="{StaticResource Btn}" Click="Clone_Click"/>
+                            <Button Name="CustomizeButton" Content="Apply name/ID/icon" Style="{StaticResource Btn}" Click="Customize_Click"/>
+                            <Button Name="BatchButton" Content="Batch install (signed)" Style="{StaticResource Btn}" Click="Batch_Click"/>
                             <Button Name="RefreshAllButton" Content="Renew everything expiring" Style="{StaticResource Btn}" Click="RefreshAll_Click"/>
                             <Button Name="AppIdsButton" Content="Show my used app slots" Style="{StaticResource Btn}" Click="AppIds_Click"/>
                             <Button Name="UpdateButton" Content="Check updates" Style="{StaticResource Btn}" Click="Update_Click"/>
                         </WrapPanel>
                     </StackPanel>
                 </Border>
+
+                <TextBlock Text="AUTOMATE — pairing, folders and auto-refresh" FontSize="12" FontWeight="Bold" Foreground="#007ACC" Margin="0,0,0,6"/>
 
                 <!-- 5. pairing, auto-folder, keep-alive -->
                 <Border Style="{StaticResource Card}">
