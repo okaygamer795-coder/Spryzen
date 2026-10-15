@@ -1,87 +1,201 @@
 ﻿<Window x:Class="SideLoadr.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="SideLoadr — IPA Sideloading" Height="720" Width="940"
+        xmlns:local="clr-namespace:SideLoadr"
+        Title="SideLoadr — IPA Sideloading" Height="780" Width="980"
+        MinWidth="820" MinHeight="640"
+        Background="#1E1E1E" Foreground="#E0E0E0"
         AllowDrop="True" Drop="Window_Drop">
-    <Grid Margin="12">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+    <Window.Resources>
+        <local:DaysLeftToBrushConverter x:Key="DaysLeftBrush"/>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="#252526"/>
+            <Setter Property="BorderBrush" Value="#3E3E42"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        <Style x:Key="CardTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style x:Key="Hint" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#9E9E9E"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#1E1E1E"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#3E3E42"/>
+            <Setter Property="Padding" Value="6,4"/>
+        </Style>
+        <Style TargetType="PasswordBox">
+            <Setter Property="Background" Value="#1E1E1E"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#3E3E42"/>
+            <Setter Property="Padding" Value="6,4"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Background" Value="#1E1E1E"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#3E3E42"/>
+            <Setter Property="Padding" Value="6,4"/>
+        </Style>
+        <Style x:Key="Btn" TargetType="Button">
+            <Setter Property="Background" Value="#3E3E42"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style x:Key="PrimaryBtn" TargetType="Button" BasedOn="{StaticResource Btn}">
+            <Setter Property="Background" Value="#007ACC"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="16,8"/>
+        </Style>
+        <Style TargetType="ListView">
+            <Setter Property="Background" Value="#1E1E1E"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#3E3E42"/>
+        </Style>
+        <Style TargetType="GridViewColumnHeader">
+            <Setter Property="Background" Value="#2D2D30"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#3E3E42"/>
+            <Setter Property="Padding" Value="6,3"/>
+        </Style>
+        <Style TargetType="StatusBar">
+            <Setter Property="Background" Value="#007ACC"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+    </Window.Resources>
 
-        <TextBlock Grid.Row="0" Text="SideLoadr" FontSize="22" FontWeight="Bold"/>
-        <TextBlock Grid.Row="1" Name="DriverStatusLabel" Text="Checking drivers…" Margin="0,2,0,8" Foreground="Gray"/>
+    <DockPanel>
+        <!-- status bar -->
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <TextBlock Name="StatusLabel" Text="Ready"/>
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">
+                <ProgressBar Name="BusyBar" Width="160" Height="12" IsIndeterminate="True" Visibility="Collapsed"/>
+            </StatusBarItem>
+        </StatusBar>
 
-        <GroupBox Grid.Row="2" Header="1. IPA file (drag &amp; drop an .ipa anywhere)" Margin="0,0,0,8">
-            <StackPanel Margin="8">
-                <DockPanel>
-                    <Button Name="BrowseButton" Content="Browse…" Width="90" DockPanel.Dock="Right" Margin="8,0,0,0" Click="Browse_Click"/>
-                    <TextBox Name="IpaPathBox" IsReadOnly="True" VerticalContentAlignment="Center"/>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
+            <StackPanel>
+                <!-- header -->
+                <DockPanel Margin="0,0,0,4">
+                    <StackPanel>
+                        <TextBlock Text="SideLoadr" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                        <TextBlock Text="Sideload IPAs with a free Apple ID — drag &amp; drop an .ipa anywhere" Style="{StaticResource Hint}"/>
+                    </StackPanel>
+                    <TextBlock Text="v0.2.0" DockPanel.Dock="Right" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
                 </DockPanel>
-                <TextBlock Name="IpaInfoLabel" Text="No IPA selected." Margin="0,4,0,0" Foreground="Gray"/>
+                <TextBlock Name="DriverStatusLabel" Text="Checking drivers…" Style="{StaticResource Hint}" Margin="0,0,0,10"/>
+                <TextBlock Name="ToolsStatusLabel" Text="" Style="{StaticResource Hint}" Margin="0,0,0,10"/>
+
+                <!-- 1. IPA -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="1 · IPA file" Style="{StaticResource CardTitle}"/>
+                        <DockPanel>
+                            <Button Name="BrowseButton" Content="Browse…" Style="{StaticResource Btn}" Width="90" DockPanel.Dock="Right" Margin="8,0,0,0" Click="Browse_Click"/>
+                            <TextBox Name="IpaPathBox" IsReadOnly="True" VerticalContentAlignment="Center"/>
+                        </DockPanel>
+                        <TextBlock Name="IpaInfoLabel" Text="No IPA selected." Style="{StaticResource Hint}" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 2. device -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="2 · Device (USB, trust this PC on the iPhone)" Style="{StaticResource CardTitle}"/>
+                        <DockPanel>
+                            <Button Name="RefreshButton" Content="Refresh" Style="{StaticResource Btn}" Width="90" DockPanel.Dock="Right" Margin="8,0,0,0" Click="Refresh_Click"/>
+                            <ComboBox Name="DeviceBox" DisplayMemberPath="Name" VerticalContentAlignment="Center"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 3. apple id -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="3 · Free Apple ID (only for signing — passwords stay in memory, never saved)" Style="{StaticResource CardTitle}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="130"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock Text="Apple ID (email)" Style="{StaticResource Hint}"/>
+                                <TextBox Name="AppleIdBox" VerticalContentAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                <TextBlock Text="Password / app-specific password" Style="{StaticResource Hint}"/>
+                                <PasswordBox Name="PwdBox" VerticalContentAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="2FA code (if asked)" Style="{StaticResource Hint}"/>
+                                <TextBox Name="TwoFactorBox" VerticalContentAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="Anisette server (pre-filled public default — replace with your own if it fails)" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
+                        <DockPanel Margin="0,4,0,0">
+                            <Button Name="DefaultAnisetteButton" Content="Default" Style="{StaticResource Btn}" Width="80" DockPanel.Dock="Right" Margin="8,0,0,0" Click="DefaultAnisette_Click"/>
+                            <Button Name="TestAnisetteButton" Content="Test" Style="{StaticResource Btn}" Width="80" DockPanel.Dock="Right" Margin="8,0,0,0" Click="TestAnisette_Click"/>
+                            <TextBox Name="AnisetteBox" VerticalContentAlignment="Center"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- actions -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                    <Button Name="SignInstallButton" Content="Sign with free Apple ID + Install (7-day)" Style="{StaticResource PrimaryBtn}" Click="SignInstall_Click"/>
+                    <Button Name="InstallSignedButton" Content="Install already-signed IPA" Style="{StaticResource Btn}" Click="InstallSigned_Click"/>
+                </StackPanel>
+
+                <!-- bottom: tracked + log -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource Card}" Margin="0,0,5,0">
+                        <StackPanel>
+                            <TextBlock Text="Tracked apps (free certs expire after 7 days)" Style="{StaticResource CardTitle}"/>
+                            <ListView Name="TrackedList" Height="220">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="App" Width="140" DisplayMemberBinding="{Binding BundleName}"/>
+                                        <GridViewColumn Header="Expires" Width="90" DisplayMemberBinding="{Binding ExpiresAt, StringFormat=d}"/>
+                                        <GridViewColumn Header="Days left" Width="70">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding DaysLeft}" FontWeight="Bold"
+                                                               Foreground="{Binding DaysLeft, Converter={StaticResource DaysLeftBrush}}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="1" Style="{StaticResource Card}" Margin="5,0,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Log" Style="{StaticResource CardTitle}"/>
+                            <RichTextBox Name="LogBox" Height="220" IsReadOnly="True" VerticalScrollBarVisibility="Auto"
+                                         Background="#1E1E1E" Foreground="#E0E0E0" BorderBrush="#3E3E42"
+                                         FontFamily="Consolas" FontSize="11"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </StackPanel>
-        </GroupBox>
-
-        <GroupBox Grid.Row="3" Header="2. Device" Margin="0,0,0,8">
-            <DockPanel Margin="8">
-                <Button Name="RefreshButton" Content="Refresh" Width="90" DockPanel.Dock="Right" Margin="8,0,0,0" Click="Refresh_Click"/>
-                <ComboBox Name="DeviceBox" DisplayMemberPath="Name" VerticalContentAlignment="Center"/>
-            </DockPanel>
-        </GroupBox>
-
-        <GroupBox Grid.Row="4" Header="3. Free Apple ID (only needed for signing — passwords stay in memory, never saved)" Margin="0,0,0,8">
-            <Grid Margin="8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="140"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                <TextBlock Text="Apple ID (email)" Foreground="Gray"/>
-                <TextBox Grid.Row="1" Name="AppleIdBox" Margin="0,2,8,0" VerticalContentAlignment="Center"/>
-                <TextBlock Grid.Column="1" Text="Password / app-specific password" Foreground="Gray"/>
-                <PasswordBox Grid.Row="1" Grid.Column="1" Name="PwdBox" Margin="0,2,8,0" VerticalContentAlignment="Center"/>
-                <TextBlock Grid.Column="2" Text="2FA code (if asked)" Foreground="Gray"/>
-                <TextBox Grid.Row="1" Grid.Column="2" Name="TwoFactorBox" Margin="0,2,8,0" VerticalContentAlignment="Center"/>
-                <TextBlock Grid.Column="3" Text="Anisette server URL" Foreground="Gray"/>
-                <TextBox Grid.Row="1" Grid.Column="3" Name="AnisetteBox" VerticalContentAlignment="Center"/>
-            </Grid>
-        </GroupBox>
-
-        <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="0,0,0,8">
-            <Button Name="SignInstallButton" Content="Sign with free Apple ID + Install (7-day)" Padding="12,6" Click="SignInstall_Click"/>
-            <Button Name="InstallSignedButton" Content="Install already-signed IPA" Padding="12,6" Margin="8,0,0,0" Click="InstallSigned_Click"/>
-        </StackPanel>
-
-        <Grid Grid.Row="6">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            <GroupBox Header="Tracked apps (free certs expire after 7 days — re-sign to refresh)">
-                <ListView Name="TrackedList">
-                    <ListView.View>
-                        <GridView>
-                            <GridViewColumn Header="App" Width="150" DisplayMemberBinding="{Binding BundleName}"/>
-                            <GridViewColumn Header="Expires" Width="110" DisplayMemberBinding="{Binding ExpiresAt}"/>
-                            <GridViewColumn Header="Days left" Width="70" DisplayMemberBinding="{Binding DaysLeft}"/>
-                        </GridView>
-                    </ListView.View>
-                </ListView>
-            </GroupBox>
-            <GroupBox Grid.Column="1" Header="Log" Margin="8,0,0,0">
-                <TextBox Name="LogBox" IsReadOnly="True" VerticalScrollBarVisibility="Auto"
-                         HorizontalScrollBarVisibility="Auto" FontFamily="Consolas" TextWrapping="NoWrap"/>
-            </GroupBox>
-        </Grid>
-    </Grid>
+        </ScrollViewer>
+    </DockPanel>
 </Window>

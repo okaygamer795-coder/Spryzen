@@ -1,8 +1,23 @@
 ﻿using Microsoft.Win32;
 using SideLoadr.Services;
 using System.Windows;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Media;
 
 namespace SideLoadr;
+
+/// <summary>Colors the "days left" column: red when expiring, orange when close, green otherwise.</summary>
+public sealed class DaysLeftToBrushConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        => value is int days
+            ? days <= 2 ? Brushes.Tomato : days <= 4 ? Brushes.Orange : Brushes.LightGreen
+            : Brushes.Gray;
+
+    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        => throw new NotSupportedException();
+}
 
 public partial class MainWindow : Window
 {
@@ -19,21 +34,31 @@ public partial class MainWindow : Window
     {
         var settings = AppTracker.LoadSettings();
         AppleIdBox.Text = settings.AppleId;
-        AnisetteBox.Text = settings.AnisetteUrl;
+        AnisetteBox.Text = string.IsNullOrWhiteSpace(settings.AnisetteUrl)
+            ? AppTracker.DefaultAnisetteUrl
+            : settings.AnisetteUrl;
         RefreshTracked();
         _ = RefreshDevicesAsync();
     }
 
     // ---------- logging ----------
 
-    private void Log(string message)
+    private void Log(string message, bool isError = false)
     {
         Dispatcher.Invoke(() =>
         {
-            LogBox.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}\n");
+            var p = new Paragraph { Margin = new Thickness(0, 1, 0, 1) };
+            p.Inlines.Add(new Run($"[{DateTime.Now:HH:mm:ss}] ") { Foreground = Brushes.Gray });
+            p.Inlines.Add(new Run(message) { Foreground = isError ? Brushes.Tomato : Brushes.LightGray });
+            LogBox.Document.Blocks.Add(p);
+            while (LogBox.Document.Blocks.Count > 500)
+                LogBox.Document.Blocks.Remove(LogBox.Document.Blocks.FirstBlock);
             LogBox.ScrollToEnd();
         });
     }
+
+    private void SetStatus(string status)
+        => Dispatcher.Invoke(() => StatusLabel.Text = status);
 
     // ---------- IPA ----------
 
@@ -69,7 +94,7 @@ public partial class MainWindow : Window
             _ipa = null;
             IpaPathBox.Text = "";
             IpaInfoLabel.Text = "Could not read IPA.";
-            Log("IPA error: " + ex.Message);
+            Log("IPA error: " + ex.Message, isError: true);
         }
     }
 
@@ -81,6 +106,9 @@ public partial class MainWindow : Window
     private async Task RefreshDevicesAsync()
     {
         DriverStatusLabel.Text = DeviceService.DriverStatus();
+        ToolsStatusLabel.Text =
+            $"ideviceinstaller: {(DeviceService.FindTool("ideviceinstaller.exe") is null ? "missing (see README)" : "found")} · " +
+            $"zsign: {(DeviceService.FindTool("zsign.exe") is null ? "missing (see README)" : "found")}";
         try
         {
             var devices = await Task.Run(DeviceService.GetConnectedDevices);
@@ -93,11 +121,34 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            Log("Device refresh failed: " + ex.Message);
+            Log("Device refresh failed: " + ex.Message, isError: true);
         }
     }
 
     private DeviceInfo? SelectedDevice => DeviceBox.SelectedItem as DeviceInfo;
+
+    // ---------- anisette ----------
+
+    private void DefaultAnisette_Click(object sender, RoutedEventArgs e)
+    {
+        AnisetteBox.Text = AppTracker.DefaultAnisetteUrl;
+        Log("Anisette URL reset to the public default.");
+    }
+
+    private async void TestAnisette_Click(object sender, RoutedEventArgs e)
+    {
+        string url = AnisetteBox.Text.Trim();
+        if (url.Length == 0)
+        {
+            url = AppTracker.DefaultAnisetteUrl;
+            AnisetteBox.Text = url;
+        }
+        await RunGuardedAsync("anisette test", async (log, ct) =>
+        {
+            var data = await AppleAuthService.FetchAnisetteAsync(url, ct);
+            log($"Anisette OK ({data.Count} fields: {string.Join(", ", data.Keys.Take(6))}…).");
+        });
+    }
 
     // ---------- actions ----------
 
@@ -105,7 +156,7 @@ public partial class MainWindow : Window
     {
         if (_ipa is null)
         {
-            Log("Pick an IPA first.");
+            Log("Pick an IPA first.", isError: true);
             return;
         }
         string appleId = AppleIdBox.Text.Trim();
@@ -113,8 +164,13 @@ public partial class MainWindow : Window
         string anisette = AnisetteBox.Text.Trim();
         if (appleId.Length == 0 || password.Length == 0)
         {
-            Log("Enter your Apple ID and password (or app-specific password) first.");
+            Log("Enter your Apple ID and password (or app-specific password) first.", isError: true);
             return;
+        }
+        if (anisette.Length == 0)
+        {
+            anisette = AppTracker.DefaultAnisetteUrl;
+            AnisetteBox.Text = anisette;
         }
         AppTracker.SaveSettings(new AppSettings(appleId, anisette, SelectedDevice?.Udid));
 
@@ -134,7 +190,7 @@ public partial class MainWindow : Window
     {
         if (_ipa is null)
         {
-            Log("Pick an IPA first (must already be signed).");
+            Log("Pick an IPA first (must already be signed).", isError: true);
             return;
         }
         await RunGuardedAsync("install", async (log, ct) =>
@@ -157,35 +213,41 @@ public partial class MainWindow : Window
 
     private async Task RunGuardedAsync(string name, Func<Action<string>, CancellationToken, Task> work)
     {
-        SetBusy(true);
+        SetBusy(true, name + "…");
         _cts = new CancellationTokenSource();
         try
         {
             Log($"Starting {name}...");
-            await Task.Run(() => work(Log, _cts.Token));
+            await Task.Run(() => work(msg => Log(msg), _cts.Token));
         }
         catch (OperationCanceledException)
         {
-            Log("Cancelled.");
+            Log("Cancelled.", isError: true);
         }
         catch (Exception ex)
         {
-            Log($"FAILED: {ex.Message}");
+            Log($"FAILED: {ex.Message}", isError: true);
         }
         finally
         {
             _cts?.Dispose();
             _cts = null;
-            SetBusy(false);
+            SetBusy(false, "Ready");
         }
     }
 
-    private void SetBusy(bool busy)
+    private void SetBusy(bool busy, string status)
     {
-        SignInstallButton.IsEnabled = !busy;
-        InstallSignedButton.IsEnabled = !busy;
-        RefreshButton.IsEnabled = !busy;
-        BrowseButton.IsEnabled = !busy;
+        Dispatcher.Invoke(() =>
+        {
+            SignInstallButton.IsEnabled = !busy;
+            InstallSignedButton.IsEnabled = !busy;
+            RefreshButton.IsEnabled = !busy;
+            BrowseButton.IsEnabled = !busy;
+            TestAnisetteButton.IsEnabled = !busy;
+            BusyBar.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
+            StatusLabel.Text = status;
+        });
     }
 
     private void RefreshTracked()
@@ -193,6 +255,6 @@ public partial class MainWindow : Window
         var apps = AppTracker.Load().OrderBy(a => a.ExpiresAt).ToList();
         TrackedList.ItemsSource = apps;
         foreach (var app in apps.Where(a => a.DaysLeft <= 2))
-            Log($"Reminder: {app.BundleName} expires in {app.DaysLeft} day(s) — re-sign soon.");
+            Log($"Reminder: {app.BundleName} expires in {app.DaysLeft} day(s) — re-sign soon.", isError: true);
     }
 }

@@ -21,6 +21,13 @@ public sealed class AppleAuthService(HttpClient http, string anisetteServerUrl)
 {
     private static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
 
+    /// <summary>Fetches anisette data without logging in — used by the Test button.</summary>
+    public static async Task<Dictionary<string, string>> FetchAnisetteAsync(string serverUrl, CancellationToken ct)
+    {
+        using var http = new HttpClient();
+        return await new AppleAuthService(http, serverUrl).GetAnisetteDataAsync(ct);
+    }
+
     public async Task<AppleSession> LoginAsync(
         string appleId,
         string password,
