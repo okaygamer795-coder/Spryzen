@@ -16,6 +16,12 @@
 Free Apple ID rules (Apple's, for everyone): ~3 apps, ~10 IDs, **7-day
 certificates** — re-sign to renew. SideLoadr tracks expiry and can auto-renew daily.
 
+## Screenshots
+
+| SideLoadr (Windows) | Spryzen (iPhone) |
+|---|---|
+| ![SideLoadr](docs/sideloader-main.png) | ![Spryzen](docs/spryzen-library.png) |
+
 ---
 
 WPF desktop app (.NET 8) that signs IPAs with a **free Apple ID** (7-day certificate,
