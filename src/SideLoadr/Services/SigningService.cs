@@ -79,6 +79,13 @@ public static class SigningService
     private static async Task<string> ResignAsync(
         string ipaPath, string profilePath, string keyPemPath, string certPath,
         Action<string> log, CancellationToken ct)
+        => await ResignWithMaterialsAsync(ipaPath, profilePath, keyPemPath, certPath, log, ct);
+
+    /// <summary>Resigns an IPA with caller-provided key/cert/profile (free-flow
+    /// or user-supplied materials — same zsign step either way).</summary>
+    public static async Task<string> ResignWithMaterialsAsync(
+        string ipaPath, string profilePath, string keyPemPath, string certPath,
+        Action<string> log, CancellationToken ct)
     {
         string? zsign = DeviceService.FindTool("zsign.exe")
             ?? throw new FileNotFoundException(

@@ -95,7 +95,7 @@
                     </StackPanel>
                     <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Orientation="Horizontal">
                         <Button Name="GuideButton" Content="📖 Beginner guide" Style="{StaticResource Btn}" Click="Guide_Click"/>
-                        <TextBlock Text="v0.7.0" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
+                        <TextBlock Text="v0.8.0" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
                     </StackPanel>
                 </DockPanel>
                 <TextBlock Name="DriverStatusLabel" Text="Checking drivers…" Style="{StaticResource Hint}" Margin="0,0,0,10"/>
@@ -278,6 +278,39 @@
                         </Grid>
                         <Button Name="SuperchargeButton" Content="✨ Makeover selected app" Style="{StaticResource PrimaryBtn}" HorizontalAlignment="Left" Click="Supercharge_Click"/>
                         <TextBlock Text="Safe to try: makes a new file, your original is never changed. Lowering the iOS version too far can make an app crash on old devices — when in doubt, leave it at 14.0." Style="{StaticResource Hint}" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 8. my own certificate -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="8 · My own certificate (paid Apple ID — skips the Apple login)" Style="{StaticResource CardTitle}"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="170"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock Text="Certificate (.p12 with its key)" Style="{StaticResource Hint}"/>
+                                <DockPanel>
+                                    <Button Name="P12BrowseButton" Content="…" Style="{StaticResource Btn}" Width="34" DockPanel.Dock="Right" Margin="8,0,0,0" Click="P12Browse_Click"/>
+                                    <TextBox Name="P12PathBox" IsReadOnly="True" VerticalContentAlignment="Center"/>
+                                </DockPanel>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                <TextBlock Text="Certificate password" Style="{StaticResource Hint}"/>
+                                <PasswordBox Name="P12PwdBox" VerticalContentAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Provisioning profile" Style="{StaticResource Hint}"/>
+                                <DockPanel>
+                                    <Button Name="ProvBrowseButton" Content="…" Style="{StaticResource Btn}" Width="34" DockPanel.Dock="Right" Margin="8,0,0,0" Click="ProvBrowse_Click"/>
+                                    <TextBox Name="ProvPathBox" IsReadOnly="True" VerticalContentAlignment="Center"/>
+                                </DockPanel>
+                            </StackPanel>
+                        </Grid>
+                        <Button Name="CertSignButton" Content="Sign with my certificate + Install" Style="{StaticResource Btn}" HorizontalAlignment="Left" Click="CertSign_Click"/>
                     </StackPanel>
                 </Border>
 

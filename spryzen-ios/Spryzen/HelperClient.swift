@@ -13,6 +13,7 @@ import Foundation
 struct HelperResponse: Codable {
     var ok: Bool
     var message: String
+    var bundleId: String?
 }
 
 struct HelperStatus: Codable {
@@ -21,6 +22,15 @@ struct HelperStatus: Codable {
 }
 
 enum HelperClient {
+    /// UDIDs of devices the helper currently sees over usbmux.
+    static func devices(helperURL: String) async throws -> [String] {
+        let url = URL(string: helperURL.hasSuffix("/") ? helperURL + "devices" : helperURL + "/devices")!
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+            throw HelperError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+        return (try? JSONDecoder().decode([String].self, from: data)) ?? []
+    }
     static func status(helperURL: String) async throws -> HelperStatus {
         let url = URL(string: helperURL.hasSuffix("/") ? helperURL + "status" : helperURL + "/status")!
         let (data, response) = try await URLSession.shared.data(from: url)
@@ -43,21 +53,34 @@ enum HelperClient {
         }
         return try JSONDecoder().decode(HelperResponse.self, from: data)
     }
+    /// Drives a refresh through the helper. Two modes, same endpoint:
+    /// - free flow: Spryzen did the portal steps on-device and sends profile + cert + key.
+    /// - custom flow: Spryzen sends its own IPA + .p12 + password + profile.
+    /// - legacy: only udid + bundleID (helper uses its own saved credentials).
     static func refreshApp(
         helperURL: String,
         udid: String,
         bundleID: String,
-        profileBase64: String,
-        ipaSHA256: String
+        profileBase64: String = "",
+        certPEM: String? = nil,
+        keyPEM: String? = nil,
+        ipaBase64: String? = nil,
+        fileName: String? = nil,
+        p12Base64: String? = nil,
+        p12Password: String? = nil
     ) async throws -> HelperResponse {
         let url = URL(string: helperURL.hasSuffix("/") ? helperURL + "refresh" : helperURL + "/refresh")!
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try JSONSerialization.data(withJSONObject: [
-            "udid": udid, "bundleID": bundleID,
-            "profile": profileBase64, "ipa_sha256": ipaSHA256,
-        ])
+        var body: [String: String] = ["udid": udid, "bundleID": bundleID, "profile": profileBase64, "ipa_sha256": ""]
+        if let certPEM, !certPEM.isEmpty { body["certPem"] = certPEM }
+        if let keyPEM, !keyPEM.isEmpty { body["keyPem"] = keyPEM }
+        if let ipaBase64, !ipaBase64.isEmpty { body["ipaB64"] = ipaBase64 }
+        if let fileName, !fileName.isEmpty { body["filename"] = fileName }
+        if let p12Base64, !p12Base64.isEmpty { body["p12B64"] = p12Base64 }
+        if let p12Password, !p12Password.isEmpty { body["p12Password"] = p12Password }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, response) = try await URLSession.shared.data(for: req)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else {
             throw HelperError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)

@@ -5,7 +5,17 @@ using System.Text.Json;
 
 namespace SideLoadr.Services;
 
-public sealed record RefreshRequest(string Udid, string BundleId, string Profile, string IpaSha256);
+public sealed record RefreshRequest(
+    string? Udid = null,
+    string BundleId = "",
+    string? Profile = null,
+    string? IpaSha256 = null,
+    string? CertPem = null,
+    string? KeyPem = null,
+    string? P12B64 = null,
+    string? P12Password = null,
+    string? IpaB64 = null,
+    string? Filename = null);
 public sealed record HelperResult(bool Ok, string Message);
 public sealed record HelperStatus(bool Ok, string Version);
 
@@ -92,6 +102,11 @@ public sealed class HelperServer : IDisposable
             if (ctx.Request.HttpMethod == "GET" && path is "/status" or "/")
             {
                 await WriteJsonAsync(ctx, 200, new HelperStatus(true, AppVersion()));
+                return;
+            }
+            if (ctx.Request.HttpMethod == "GET" && path == "/devices")
+            {
+                await WriteJsonAsync(ctx, 200, DeviceService.GetUdids());
                 return;
             }
             if (ctx.Request.HttpMethod == "POST" && path == "/refresh")

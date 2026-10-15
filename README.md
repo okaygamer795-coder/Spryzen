@@ -16,6 +16,10 @@
 Free Apple ID rules (Apple's, for everyone): ~3 apps, ~10 IDs, **7-day
 certificates** — re-sign to renew. SideLoadr tracks expiry and can auto-renew daily.
 
+Got a **paid Apple ID**? Card 8 signs with your own `.p12` + `.mobileprovision`
+instead — no Apple login, longer-lived certificates. The `.p12` is read with
+built-in crypto (OpenSSL fallback); temp files are wiped after.
+
 ## Screenshots
 
 | SideLoadr (Windows) | Spryzen (iPhone) |
@@ -28,7 +32,6 @@ WPF desktop app (.NET 8) that signs IPAs with a **free Apple ID** (7-day certifi
 like AltStore/Sideloadly) and installs them on a connected iPhone/iPad over USB.
 
 ## Install from GitHub (no setup program — just run it)
-
 1. Go to **Releases** and download `SideLoadr-vX-win-x64.exe` from **Assets**
    (not the "Source code" zip — that is for developers).
    A `.zip` with the same exe is attached too if your browser blocks the raw exe.

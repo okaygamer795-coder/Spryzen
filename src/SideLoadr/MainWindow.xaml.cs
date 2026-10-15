@@ -535,29 +535,14 @@ public partial class MainWindow : Window
 
     private async Task<HelperResult> HandleHelperRefreshAsync(RefreshRequest req)
     {
-        var app = AppTracker.Load().FirstOrDefault(a =>
-            a.BundleId == req.BundleId && (string.IsNullOrEmpty(req.Udid) || a.Udid == req.Udid));
-        if (app is null || string.IsNullOrEmpty(app.IpaPath))
-            return new HelperResult(false, "Unknown app — install it from SideLoadr first.");
-        if (!CredentialStore.TryLoad(out string appleId, out string password))
-            return new HelperResult(false, "No saved credentials — turn on Remember me in SideLoadr.");
-        string anisette = AppTracker.LoadSettings().AnisetteUrl;
-        if (string.IsNullOrWhiteSpace(anisette))
-            anisette = AppTracker.DefaultAnisetteUrl;
-        try
-        {
-            var signReq = new SignRequest(app.IpaPath, appleId, password, anisette, app.Udid, () =>
-                Task.FromException<string>(new InvalidOperationException("2FA needed — sign in manually once.")));
-            string signed = await SigningService.SignWithFreeAccountAsync(signReq, msg => Log(msg), CancellationToken.None);
-            await InstallService.InstallAsync(signed, string.IsNullOrEmpty(app.Udid) ? null : app.Udid, msg => Log(msg), CancellationToken.None);
-            AppTracker.RecordInstalled(app.BundleId, app.BundleName, app.Udid, app.IpaPath);
+        var (result, changed) = await HelperRefreshService.HandleAsync(
+            req,
+            () => Task.FromException<string>(new InvalidOperationException("2FA needed — sign in manually once.")),
+            msg => Log(msg),
+            CancellationToken.None);
+        if (changed)
             Dispatcher.Invoke(RefreshTracked);
-            return new HelperResult(true, $"Renewed {app.BundleName}.");
-        }
-        catch (Exception ex)
-        {
-            return new HelperResult(false, ex.Message);
-        }
+        return result;
     }
 
     private async Task<HelperResult> HandleHelperInstallAsync(string fileName, byte[] ipa)
@@ -579,6 +564,48 @@ public partial class MainWindow : Window
         {
             return new HelperResult(false, ex.Message);
         }
+    }
+
+    // ---------- my own certificate ----------
+
+    private void P12Browse_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFileDialog { Filter = "Certificates (*.p12;*.pfx)|*.p12;*.pfx" };
+        if (dlg.ShowDialog() == true)
+            P12PathBox.Text = dlg.FileName;
+    }
+
+    private void ProvBrowse_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFileDialog { Filter = "Provisioning profiles (*.mobileprovision)|*.mobileprovision" };
+        if (dlg.ShowDialog() == true)
+            ProvPathBox.Text = dlg.FileName;
+    }
+
+    private async void CertSign_Click(object sender, RoutedEventArgs e)
+    {
+        if (_ipa is null)
+        {
+            Log("Pick an IPA file first.", isError: true);
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(P12PathBox.Text) || string.IsNullOrWhiteSpace(ProvPathBox.Text))
+        {
+            Log("Pick your .p12 certificate and .mobileprovision profile first.", isError: true);
+            return;
+        }
+        await RunGuardedAsync("sign with my certificate", async (log, ct) =>
+        {
+            byte[] pfx = await File.ReadAllBytesAsync(P12PathBox.Text.Trim(), ct);
+            var (keyPem, certPem) = CustomCertService.ExtractPems(pfx, P12PwdBox.Password, null, msg => Log(msg));
+            log("Certificate opened.");
+            string signed = await SigningService.ResignWithMaterialsAsync(
+                _ipa.FilePath, ProvPathBox.Text.Trim(), keyPem, certPem, log, ct);
+            await InstallService.InstallAsync(signed, SelectedDevice?.Udid, log, ct);
+            AppTracker.RecordInstalled(_ipa.BundleId, _ipa.BundleName, SelectedDevice?.Udid, _ipa.FilePath);
+            Dispatcher.Invoke(RefreshTracked);
+            log("Done.");
+        });
     }
 
     // ---------- actions ----------
@@ -711,6 +738,9 @@ public partial class MainWindow : Window
             InjectButton.IsEnabled = !busy;
             DylibBrowseButton.IsEnabled = !busy;
             SuperchargeButton.IsEnabled = !busy;
+            P12BrowseButton.IsEnabled = !busy;
+            ProvBrowseButton.IsEnabled = !busy;
+            CertSignButton.IsEnabled = !busy;
             BusyBar.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
             StatusLabel.Text = status;
         });

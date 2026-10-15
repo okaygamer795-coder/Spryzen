@@ -39,6 +39,18 @@ as long as the helper is reachable (same Wi-Fi, or self-hosted + VPN).
 server run by the SideStore team, pre-filled in Settings. Replace it with your
 own anisette server if it ever stops working.
 
+## Signing: free Apple ID (same system as SideLoadr) or your own certificate
+
+- **Free (default):** sign in with your Apple ID in Settings, then Refresh.
+  Spryzen asks the helper which devices it sees (`GET /devices`), logs in,
+  registers the App ID + device, builds a CSR on-device, fetches the
+  development certificate + 7-day profile, and hands the materials to the
+  helper — which only does the mechanical resign + install. Secrets live in
+  the Keychain.
+- **Custom (paid Apple ID):** switch Signing method to "My certificate" and
+  import your `.p12` (+ password) and `.mobileprovision`. Refreshes send the
+  IPA + materials to the helper; no Apple login happens.
+
 ## Honest status
 
 The app structure, library, Keychain storage, anisette client, auth flow, and

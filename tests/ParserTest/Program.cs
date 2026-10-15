@@ -205,6 +205,26 @@ Check(IpaCustomizer.CompareVersions("14.0", "17.0") < 0, "version lt");
 Check(IpaCustomizer.CompareVersions("17.0", "17.0") == 0, "version eq");
 Check(IpaCustomizer.CompareVersions("18.1", "17.0") > 0, "version gt");
 
+// custom certificate p12 roundtrip (self-signed, cleaned up)
+string p12dir = Path.Combine(Path.GetTempPath(), "sideloadr-test-" + Guid.NewGuid().ToString("N"));
+using (System.Security.Cryptography.RSA tkey = System.Security.Cryptography.RSA.Create(2048))
+{
+    var creq = new System.Security.Cryptography.X509Certificates.CertificateRequest(
+        "CN=sideloadr-test", tkey,
+        System.Security.Cryptography.HashAlgorithmName.SHA256,
+        System.Security.Cryptography.RSASignaturePadding.Pkcs1);
+    using var selfsigned = creq.CreateSelfSigned(DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now.AddYears(1));
+    byte[] pfx = selfsigned.Export(System.Security.Cryptography.X509Certificates.X509ContentType.Pfx, "pw123");
+    var (kpath, cpath) = CustomCertService.ExtractPems(pfx, "pw123", p12dir);
+    Check(File.ReadAllText(kpath).Contains("BEGIN PRIVATE KEY"), "p12 key pem");
+    Check(File.ReadAllText(cpath).Contains("BEGIN CERTIFICATE"), "p12 cert pem");
+    bool badpw = false;
+    try { CustomCertService.ExtractPems(pfx, "wrong", p12dir); }
+    catch (InvalidDataException) { badpw = true; }
+    Check(badpw, "p12 wrong password");
+}
+try { Directory.Delete(p12dir, true); } catch { }
+
 // helper server (localhost, no device needed — validation happens first)
 static string WriteTempIpa(string name, byte[] bytes)
 {
@@ -251,6 +271,15 @@ using (var hs = new HelperServer())
     var badIpa = await http.PostAsync($"http://127.0.0.1:{hport}/install?filename=x.ipa",
         new System.Net.Http.ByteArrayContent(new byte[] { 1, 2, 3 }));
     Check((await badIpa.Content.ReadAsStringAsync()).Contains("\"ok\":false"), "helper bad ipa");
+    var devs = await http.GetStringAsync($"http://127.0.0.1:{hport}/devices");
+    Check(devs.TrimStart().StartsWith("["), "helper devices list");
+    var matRefresh = await http.PostAsync($"http://127.0.0.1:{hport}/refresh",
+        new System.Net.Http.StringContent("{\"bundleID\":\"com.nope\",\"profile\":\"e30=\",\"certPem\":\"x\",\"keyPem\":\"y\"}", System.Text.Encoding.UTF8, "application/json"));
+    Check((await matRefresh.Content.ReadAsStringAsync()).Contains("\"ok\":false"), "helper bad materials fail gracefully");
+    var (rr, changed) = await HelperRefreshService.HandleAsync(
+        new RefreshRequest(BundleId: "com.nope", Profile: "e30=", CertPem: "x", KeyPem: "y"),
+        () => Task.FromResult(""), _ => { }, CancellationToken.None);
+    Check(!rr.Ok && !changed, "refresh service unknown app");
 }
 
 Console.WriteLine(failures == 0 ? "ALL OK" : $"{failures} FAILURES");

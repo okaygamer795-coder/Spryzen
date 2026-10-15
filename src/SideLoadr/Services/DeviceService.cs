@@ -86,6 +86,9 @@ public static class DeviceService
         return null;
     }
 
+    /// <summary>UDIDs of devices currently visible to libimobiledevice tools (empty if none).</summary>
+    public static IReadOnlyList<string> GetUdids() => TryGetUdidsFromTools();
+
     private static IReadOnlyList<string> TryGetUdidsFromTools()
     {
         string? tool = FindTool("idevice_id.exe");

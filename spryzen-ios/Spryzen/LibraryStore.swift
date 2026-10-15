@@ -56,4 +56,20 @@ enum Settings {
         get { defaults.string(forKey: "helperURL") ?? "" }
         set { defaults.set(newValue, forKey: "helperURL") }
     }
+    /// "free" (free Apple ID flow) or "custom" (user's own certificate).
+    static var certMode: String {
+        get {
+            let v = defaults.string(forKey: "certMode") ?? ""
+            return v == "custom" ? "custom" : "free"
+        }
+        set { defaults.set(newValue, forKey: "certMode") }
+    }
+    static var customProvisionURL: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("spryzen-custom.mobileprovision")
+    }
+    static var importsDir: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("imports")
+    }
 }

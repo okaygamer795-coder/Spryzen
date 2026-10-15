@@ -30,6 +30,16 @@ enum KeychainHelper {
         return String(data: data, encoding: .utf8)
     }
 
+    /// Binary blobs (e.g. .p12) are stored base64-encoded through the string API.
+    static func saveData(_ data: Data, account: String, service: String = "com.spryzen.app") -> Bool {
+        save(data.base64EncodedString(), account: account, service: service)
+    }
+
+    static func loadData(account: String, service: String = "com.spryzen.app") -> Data? {
+        guard let b64 = load(account: account, service: service) else { return nil }
+        return Data(base64Encoded: b64)
+    }
+
     @discardableResult
     static func delete(account: String, service: String = "com.spryzen.app") -> Bool {
         let query: [String: Any] = [

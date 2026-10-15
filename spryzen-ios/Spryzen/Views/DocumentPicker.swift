@@ -2,8 +2,9 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
-/// .ipa file picker (accepts any data file, filters by .ipa extension).
+/// .ipa/.p12/.mobileprovision file picker (filters by extension).
 struct DocumentPicker: UIViewControllerRepresentable {
+    var fileExtension: String = "ipa"
     var onPick: (URL) -> Void
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
@@ -14,14 +15,18 @@ struct DocumentPicker: UIViewControllerRepresentable {
 
     func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
 
-    func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick) }
+    func makeCoordinator() -> Coordinator { Coordinator(fileExtension: fileExtension, onPick: onPick) }
 
     final class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let fileExtension: String
         let onPick: (URL) -> Void
-        init(onPick: @escaping (URL) -> Void) { self.onPick = onPick }
+        init(fileExtension: String, onPick: @escaping (URL) -> Void) {
+            self.fileExtension = fileExtension
+            self.onPick = onPick
+        }
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
             guard let url = urls.first,
-                  url.pathExtension.lowercased() == "ipa" else { return }
+                  url.pathExtension.lowercased() == fileExtension else { return }
             onPick(url)
         }
     }
