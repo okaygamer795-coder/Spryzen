@@ -19,6 +19,15 @@ targets:
           - Spryzen.entitlements
     info:
       path: Spryzen/Info.plist
+      properties:
+        CFBundleDisplayName: Spryzen
+        LSRequiresIPhoneOS: true
+        UILaunchStoryboardName: LaunchScreen
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.spryzen.app.refresh
+        ITSAppUsesNonExemptEncryption: false
     entitlements:
       path: Spryzen/Spryzen.entitlements
     settings:
