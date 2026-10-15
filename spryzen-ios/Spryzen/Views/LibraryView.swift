@@ -12,16 +12,16 @@ struct LibraryView: View {
             List {
                 if library.apps.isEmpty {
                     Text("No apps yet. Tap + to import an .ipa, then install it with the SideLoadr helper.")
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(.secondary)
                 }
                 ForEach(library.apps) { app in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(app.name).font(.headline)
-                        Text(app.bundleID).font(.caption).foregroundStyle(.secondary)
+                        Text(app.bundleID).font(.caption).foregroundColor(.secondary)
                         Text(app.daysLeft <= 2 ? "Expires in \(app.daysLeft) day(s) — refresh soon"
                                                : "\(app.daysLeft) days left")
                             .font(.caption)
-                            .foregroundStyle(app.daysLeft <= 2 ? .red : .secondary)
+                            .foregroundColor(app.daysLeft <= 2 ? .red : .secondary)
                         Button("Refresh now") { Task { await refresh(app) } }
                             .font(.caption)
                             .disabled(isWorking)

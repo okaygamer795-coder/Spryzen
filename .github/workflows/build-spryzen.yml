@@ -1,0 +1,48 @@
+name: Build Spryzen IPA
+
+on:
+  push:
+    paths:
+      - "spryzen-ios/**"
+      - ".github/workflows/build-spryzen.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: spryzen-ios
+        run: xcodegen generate
+
+      - name: Build unsigned archive
+        working-directory: spryzen-ios
+        run: >
+          xcodebuild
+          -project Spryzen.xcodeproj
+          -scheme Spryzen
+          -configuration Release
+          -destination 'generic/platform=iOS'
+          -archivePath build/Spryzen.xcarchive
+          archive
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGN_IDENTITY=""
+
+      - name: Package unsigned IPA
+        working-directory: spryzen-ios
+        run: |
+          rm -rf Payload Spryzen-unsigned.ipa
+          mkdir Payload
+          cp -r build/Spryzen.xcarchive/Products/Applications/Spryzen.app Payload/
+          zip -r Spryzen-unsigned.ipa Payload
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spryzen-unsigned
+          path: spryzen-ios/Spryzen-unsigned.ipa

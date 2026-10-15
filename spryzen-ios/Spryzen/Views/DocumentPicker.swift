@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
 /// .ipa file picker (accepts any data file, filters by .ipa extension).
