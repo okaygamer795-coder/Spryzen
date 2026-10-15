@@ -1,0 +1,26 @@
+name: Spryzen
+options:
+  bundleIdPrefix: com.spryzen
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  PRODUCT_NAME: Spryzen
+  MARKETING_VERSION: 0.1.0
+  CURRENT_PROJECT_VERSION: 1
+  SWIFT_VERSION: "5.0"
+targets:
+  Spryzen:
+    type: application
+    platform: iOS
+    sources:
+      - path: Spryzen
+        excludes:
+          - Info.plist
+          - Spryzen.entitlements
+    info:
+      path: Spryzen/Info.plist
+    entitlements:
+      path: Spryzen/Spryzen.entitlements
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.spryzen.app
+      INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: false

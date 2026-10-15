@@ -1,0 +1,87 @@
+﻿<Window x:Class="SideLoadr.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SideLoadr — IPA Sideloading" Height="720" Width="940"
+        AllowDrop="True" Drop="Window_Drop">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="SideLoadr" FontSize="22" FontWeight="Bold"/>
+        <TextBlock Grid.Row="1" Name="DriverStatusLabel" Text="Checking drivers…" Margin="0,2,0,8" Foreground="Gray"/>
+
+        <GroupBox Grid.Row="2" Header="1. IPA file (drag &amp; drop an .ipa anywhere)" Margin="0,0,0,8">
+            <StackPanel Margin="8">
+                <DockPanel>
+                    <Button Name="BrowseButton" Content="Browse…" Width="90" DockPanel.Dock="Right" Margin="8,0,0,0" Click="Browse_Click"/>
+                    <TextBox Name="IpaPathBox" IsReadOnly="True" VerticalContentAlignment="Center"/>
+                </DockPanel>
+                <TextBlock Name="IpaInfoLabel" Text="No IPA selected." Margin="0,4,0,0" Foreground="Gray"/>
+            </StackPanel>
+        </GroupBox>
+
+        <GroupBox Grid.Row="3" Header="2. Device" Margin="0,0,0,8">
+            <DockPanel Margin="8">
+                <Button Name="RefreshButton" Content="Refresh" Width="90" DockPanel.Dock="Right" Margin="8,0,0,0" Click="Refresh_Click"/>
+                <ComboBox Name="DeviceBox" DisplayMemberPath="Name" VerticalContentAlignment="Center"/>
+            </DockPanel>
+        </GroupBox>
+
+        <GroupBox Grid.Row="4" Header="3. Free Apple ID (only needed for signing — passwords stay in memory, never saved)" Margin="0,0,0,8">
+            <Grid Margin="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Apple ID (email)" Foreground="Gray"/>
+                <TextBox Grid.Row="1" Name="AppleIdBox" Margin="0,2,8,0" VerticalContentAlignment="Center"/>
+                <TextBlock Grid.Column="1" Text="Password / app-specific password" Foreground="Gray"/>
+                <PasswordBox Grid.Row="1" Grid.Column="1" Name="PwdBox" Margin="0,2,8,0" VerticalContentAlignment="Center"/>
+                <TextBlock Grid.Column="2" Text="2FA code (if asked)" Foreground="Gray"/>
+                <TextBox Grid.Row="1" Grid.Column="2" Name="TwoFactorBox" Margin="0,2,8,0" VerticalContentAlignment="Center"/>
+                <TextBlock Grid.Column="3" Text="Anisette server URL" Foreground="Gray"/>
+                <TextBox Grid.Row="1" Grid.Column="3" Name="AnisetteBox" VerticalContentAlignment="Center"/>
+            </Grid>
+        </GroupBox>
+
+        <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button Name="SignInstallButton" Content="Sign with free Apple ID + Install (7-day)" Padding="12,6" Click="SignInstall_Click"/>
+            <Button Name="InstallSignedButton" Content="Install already-signed IPA" Padding="12,6" Margin="8,0,0,0" Click="InstallSigned_Click"/>
+        </StackPanel>
+
+        <Grid Grid.Row="6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <GroupBox Header="Tracked apps (free certs expire after 7 days — re-sign to refresh)">
+                <ListView Name="TrackedList">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="App" Width="150" DisplayMemberBinding="{Binding BundleName}"/>
+                            <GridViewColumn Header="Expires" Width="110" DisplayMemberBinding="{Binding ExpiresAt}"/>
+                            <GridViewColumn Header="Days left" Width="70" DisplayMemberBinding="{Binding DaysLeft}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </GroupBox>
+            <GroupBox Grid.Column="1" Header="Log" Margin="8,0,0,0">
+                <TextBox Name="LogBox" IsReadOnly="True" VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Auto" FontFamily="Consolas" TextWrapping="NoWrap"/>
+            </GroupBox>
+        </Grid>
+    </Grid>
+</Window>

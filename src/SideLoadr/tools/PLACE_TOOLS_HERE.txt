@@ -1,0 +1,10 @@
+Put helper binaries here so they ship next to SideLoadr.exe:
+
+  idevice_id.exe, ideviceinstaller.exe
+    Windows builds of libimobiledevice (device detection by UDID + installing IPAs).
+
+  zsign.exe
+    Windows build of zsign (resigns the IPA with your free certificate).
+
+Without them the app still runs: it reads IPAs, shows Apple USB devices,
+and tells you exactly which tool is missing when you press a button.

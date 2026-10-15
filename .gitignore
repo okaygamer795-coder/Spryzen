@@ -1,0 +1,12 @@
+bin/
+obj/
+publish/
+publish-single/
+packages/
+.vs/
+*.user
+*.suo
+tools/*.exe
+tools/dotnet-install.ps1
+tools/localproxy.py
+.DS_Store
