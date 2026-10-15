@@ -8,22 +8,7 @@ public static class IpaReader
 {
     public static IpaInfo Read(string ipaPath)
     {
-        if (!File.Exists(ipaPath))
-            throw new FileNotFoundException("IPA not found.", ipaPath);
-
-        using var zip = ZipFile.OpenRead(ipaPath);
-        var entry = zip.Entries.FirstOrDefault(e => IsAppPlist(e.FullName))
-            ?? throw new InvalidDataException("No Payload/*.app/Info.plist found — not a valid IPA.");
-
-        byte[] bytes;
-        using (var s = entry.Open())
-        using (var ms = new MemoryStream())
-        {
-            s.CopyTo(ms);
-            bytes = ms.ToArray();
-        }
-
-        var dict = PlistParser.Parse(bytes);
+        var dict = ReadPlist(ipaPath);
         string bundleId = GetString(dict, "CFBundleIdentifier")
             ?? throw new InvalidDataException("Info.plist has no CFBundleIdentifier.");
         string name = GetString(dict, "CFBundleDisplayName")
@@ -34,6 +19,23 @@ public static class IpaReader
             ?? "?";
 
         return new IpaInfo(ipaPath, bundleId, name, version, GetString(dict, "MinimumOSVersion"));
+    }
+
+    /// <summary>Returns the raw Info.plist dictionary (for tools that need
+    /// more than <see cref="Read"/> exposes, e.g. the executable name).</summary>
+    public static Dictionary<string, object?> ReadPlist(string ipaPath)
+    {
+        if (!File.Exists(ipaPath))
+            throw new FileNotFoundException("IPA not found.", ipaPath);
+
+        using var zip = ZipFile.OpenRead(ipaPath);
+        var entry = zip.Entries.FirstOrDefault(e => IsAppPlist(e.FullName))
+            ?? throw new InvalidDataException("No Payload/*.app/Info.plist found — not a valid IPA.");
+
+        using var s = entry.Open();
+        using var ms = new MemoryStream();
+        s.CopyTo(ms);
+        return PlistParser.Parse(ms.ToArray());
     }
 
     private static bool IsAppPlist(string fullName)

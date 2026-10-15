@@ -93,7 +93,7 @@
                         <TextBlock Text="SideLoadr" FontSize="24" FontWeight="Bold" Foreground="White"/>
                         <TextBlock Text="Sideload IPAs with a free Apple ID — drag &amp; drop an .ipa anywhere" Style="{StaticResource Hint}"/>
                     </StackPanel>
-                    <TextBlock Text="v0.4.0" DockPanel.Dock="Right" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
+                    <TextBlock Text="v0.5.0" DockPanel.Dock="Right" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
                 </DockPanel>
                 <TextBlock Name="DriverStatusLabel" Text="Checking drivers…" Style="{StaticResource Hint}" Margin="0,0,0,10"/>
                 <TextBlock Name="ToolsStatusLabel" Text="" Style="{StaticResource Hint}" Margin="0,0,0,10"/>
@@ -224,6 +224,19 @@
                             <Button Name="KeepAliveButton" Content="Enable daily refresh" Style="{StaticResource Btn}" Width="150" DockPanel.Dock="Right" Margin="8,0,0,0" Click="KeepAlive_Click"/>
                             <TextBlock Name="KeepAliveStatusLabel" Text="Auto-refresh: unknown" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
                         </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 6. tweak injection -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="6 · Tweak injection (inserts a .dylib into the app — re-sign afterwards)" Style="{StaticResource CardTitle}"/>
+                        <DockPanel>
+                            <Button Name="InjectButton" Content="Inject into selected IPA" Style="{StaticResource Btn}" Width="170" DockPanel.Dock="Right" Margin="8,0,0,0" Click="Inject_Click"/>
+                            <Button Name="DylibBrowseButton" Content="…" Style="{StaticResource Btn}" Width="34" DockPanel.Dock="Right" Margin="8,0,0,0" Click="DylibBrowse_Click"/>
+                            <TextBox Name="DylibPathBox" IsReadOnly="True" VerticalContentAlignment="Center"/>
+                        </DockPanel>
+                        <TextBlock Text="Refuses App Store-encrypted binaries (decrypt on a jailbroken device first). Output must be signed before install." Style="{StaticResource Hint}" Margin="0,6,0,0"/>
                     </StackPanel>
                 </Border>
 

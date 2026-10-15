@@ -114,5 +114,61 @@ Check(loaded && cid == "test@example.com" && cpw == "s3cret", "credential roundt
 CredentialStore.Delete(target);
 Check(!CredentialStore.TryLoad(out _, out _, target), "credential deleted");
 
+// mach-o tweak injection
+static bool ContainsSeq(byte[] hay, byte[] needle)
+{
+    for (int i = 0; i + needle.Length <= hay.Length; i++)
+    {
+        bool match = true;
+        for (int j = 0; j < needle.Length; j++)
+            if (hay[i + j] != needle[j]) { match = false; break; }
+        if (match) return true;
+    }
+    return false;
+}
+string loadPath = "@executable_path/Frameworks/fake.dylib";
+byte[] loadBytes = System.Text.Encoding.UTF8.GetBytes(loadPath);
+byte[] thin = File.ReadAllBytes(@"D:\SideLoadr\tests\macho_thin.bin");
+int ncmdsBefore = BitConverter.ToInt32(thin, 16);
+var inj = MachOInjector.InjectIntoBytes(thin, loadPath);
+Check(inj.SlicesPatched == 1 && !inj.AlreadyPresent, "macho inject thin");
+Check(BitConverter.ToInt32(thin, 16) == ncmdsBefore + 1, "macho ncmds bumped");
+Check(ContainsSeq(thin, loadBytes), "macho load path present");
+var inj2 = MachOInjector.InjectIntoBytes(thin, loadPath);
+Check(inj2.AlreadyPresent && inj2.SlicesPatched == 0, "macho idempotent");
+bool crypt = false;
+try { MachOInjector.InjectIntoBytes(File.ReadAllBytes(@"D:\SideLoadr\tests\macho_crypt.bin"), loadPath); }
+catch (InvalidDataException) { crypt = true; }
+Check(crypt, "macho refuses encrypted");
+bool nospace = false;
+try { MachOInjector.InjectIntoBytes(File.ReadAllBytes(@"D:\SideLoadr\tests\macho_nospace.bin"), loadPath); }
+catch (InvalidDataException) { nospace = true; }
+Check(nospace, "macho refuses no-room");
+var fat = MachOInjector.InjectIntoBytes(File.ReadAllBytes(@"D:\SideLoadr\tests\macho_fat.bin"), loadPath);
+Check(fat.SlicesPatched == 2, "macho fat both slices");
+// IPA-level injection
+var tw = IpaCustomizer.InjectTweak(@"D:\SideLoadr\tests\test-tweak.ipa", @"D:\SideLoadr\tests\fake.dylib");
+using (var zip = System.IO.Compression.ZipFile.OpenRead(tw.Path))
+{
+    var fw = zip.GetEntry("Payload/TweakApp.app/Frameworks/fake.dylib")!;
+    using var fs = fw.Open();
+    using var fms = new MemoryStream();
+    fs.CopyTo(fms);
+    Check(fms.ToArray().SequenceEqual(File.ReadAllBytes(@"D:\SideLoadr\tests\fake.dylib")), "tweak dylib bundled");
+    var exe = zip.GetEntry("Payload/TweakApp.app/TweakApp")!;
+    using var es = exe.Open();
+    using var ems = new MemoryStream();
+    es.CopyTo(ems);
+    Check(ContainsSeq(ems.ToArray(), loadBytes), "tweak exe patched");
+}
+Check(tw.Notes.Any(n => n.Contains("Re-sign")), "inject notes resign");
+Check(IpaReader.Read(tw.Path).BundleId == "com.test.tweakapp", "injected ipa still valid");
+File.Delete(tw.Path);
+// non-executable entry is rejected, not silently patched
+bool noexe = false;
+try { IpaCustomizer.InjectTweak(@"D:\SideLoadr\tests\test.ipa", @"D:\SideLoadr\tests\fake.dylib"); }
+catch (Exception) { noexe = true; }
+Check(noexe, "inject rejects bad exe");
+
 Console.WriteLine(failures == 0 ? "ALL OK" : $"{failures} FAILURES");
 return failures;

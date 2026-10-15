@@ -399,8 +399,41 @@ public partial class MainWindow : Window
             await UpdateKeepAliveStatusAsync();
         });
 
-    private async Task UpdateKeepAliveStatusAsync()
+    // ---------- tweak injection ----------
+
+    private void DylibBrowse_Click(object sender, RoutedEventArgs e)
     {
+        var dlg = new OpenFileDialog { Filter = "Dynamic libraries (*.dylib)|*.dylib" };
+        if (dlg.ShowDialog() == true)
+            DylibPathBox.Text = dlg.FileName;
+    }
+
+    private void Inject_Click(object sender, RoutedEventArgs e)
+    {
+        if (_ipa is null)
+        {
+            Log("Pick an IPA first.", isError: true);
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(DylibPathBox.Text))
+        {
+            Log("Pick a .dylib tweak first.", isError: true);
+            return;
+        }
+        try
+        {
+            var result = IpaCustomizer.InjectTweak(_ipa.FilePath, DylibPathBox.Text.Trim());
+            foreach (string note in result.Notes)
+                Log("Inject: " + note);
+            SetIpa(result.Path);
+        }
+        catch (Exception ex)
+        {
+            Log("Inject failed: " + ex.Message, isError: true);
+        }
+    }
+
+    private async Task UpdateKeepAliveStatusAsync()    {
         try
         {
             string status = await KeepAliveService.QueryStatusAsync(CancellationToken.None);
@@ -538,6 +571,8 @@ public partial class MainWindow : Window
             OpenWatchFolderButton.IsEnabled = !busy;
             KeepAliveButton.IsEnabled = !busy;
             KeepAliveRemoveButton.IsEnabled = !busy;
+            InjectButton.IsEnabled = !busy;
+            DylibBrowseButton.IsEnabled = !busy;
             BusyBar.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
             StatusLabel.Text = status;
         });

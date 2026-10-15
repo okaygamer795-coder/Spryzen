@@ -158,6 +158,75 @@ public static class IpaCustomizer
             (n + ".png").Equals(Path.GetFileName(entryName), StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>Injects a .dylib tweak: copies it into Frameworks and patches
+    /// the main executable with an LC_LOAD_DYLIB. The result MUST be re-signed
+    /// (injection invalidates the old signature by design).</summary>
+    public static CustomizeResult InjectTweak(string srcPath, string dylibPath)
+    {
+        if (!File.Exists(dylibPath))
+            throw new FileNotFoundException("Dylib not found.", dylibPath);
+        if (!dylibPath.EndsWith(".dylib", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Tweak must be a .dylib file.");
+        string dylibName = Path.GetFileName(dylibPath);
+        if (dylibName.Any(c => c is '/' or '\\' or ':'))
+            throw new InvalidDataException("Bad dylib file name.");
+
+        var dict = IpaReader.ReadPlist(srcPath);
+        string? exeName = dict.TryGetValue("CFBundleExecutable", out var e) ? e?.ToString() : null;
+        string dest = NextTo(srcPath, "-tweaked");
+        string loadPath = "@executable_path/Frameworks/" + dylibName;
+        var notes = new List<string>();
+
+        using var src = ZipFile.OpenRead(srcPath);
+        var plistEntry = src.Entries.FirstOrDefault(en => IsAppPlist(en.FullName))
+            ?? throw new InvalidDataException("No Payload/*.app/Info.plist found — not a valid IPA.");
+        string appDir = plistEntry.FullName[..^"Info.plist".Length];
+
+        string? exeEntryName = null;
+        if (!string.IsNullOrEmpty(exeName))
+            exeEntryName = src.Entries.FirstOrDefault(en =>
+                en.FullName.Equals(appDir + exeName, StringComparison.OrdinalIgnoreCase))?.FullName;
+        exeEntryName ??= src.Entries.FirstOrDefault(en =>
+            en.FullName.StartsWith(appDir, StringComparison.OrdinalIgnoreCase) &&
+            !en.FullName.EndsWith('/') &&
+            Path.GetFileName(en.FullName).IndexOf('.') < 0)?.FullName;
+        if (exeEntryName is null)
+            throw new InvalidDataException("Could not find the main executable in this IPA.");
+
+        byte[] exeBytes;
+        using (var s = src.GetEntry(exeEntryName)!.Open())
+        using (var ms = new MemoryStream())
+        {
+            s.CopyTo(ms);
+            exeBytes = ms.ToArray();
+        }
+        var inject = MachOInjector.InjectIntoBytes(exeBytes, loadPath);
+        notes.Add(inject.AlreadyPresent
+            ? $"already loads {loadPath} ({inject.SlicesPatched} slice(s) checked)"
+            : $"patched {inject.SlicesPatched} slice(s), load command +{inject.CommandSize} bytes");
+
+        byte[] dylibBytes = File.ReadAllBytes(dylibPath);
+        using var destZip = ZipFile.Open(dest, ZipArchiveMode.Create);
+        foreach (var entry in src.Entries)
+        {
+            if (entry.FullName.EndsWith('/'))
+                continue;
+            var copy = destZip.CreateEntry(entry.FullName, CompressionLevel.Optimal);
+            using var input = entry.FullName.Equals(exeEntryName, StringComparison.OrdinalIgnoreCase)
+                ? (Stream)new MemoryStream(exeBytes, writable: false)
+                : entry.Open();
+            using var output = copy.Open();
+            input.CopyTo(output);
+        }
+        var dylibEntry = destZip.CreateEntry(appDir + "Frameworks/" + dylibName, CompressionLevel.Optimal);
+        using (var w = dylibEntry.Open())
+            w.Write(dylibBytes, 0, dylibBytes.Length);
+        notes.Add($"bundled Frameworks/{dylibName}");
+        notes.Insert(0, $"wrote {dest}");
+        notes.Add("Re-sign before installing (injection invalidates the old signature).");
+        return new CustomizeResult(dest, notes);
+    }
+
     private static bool IsAppPlist(string fullName)
     {
         if (!fullName.StartsWith("Payload/", StringComparison.OrdinalIgnoreCase))
