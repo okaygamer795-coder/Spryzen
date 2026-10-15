@@ -95,7 +95,7 @@
                     </StackPanel>
                     <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Orientation="Horizontal">
                         <Button Name="GuideButton" Content="📖 Beginner guide" Style="{StaticResource Btn}" Click="Guide_Click"/>
-                        <TextBlock Text="v0.6.3" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
+                        <TextBlock Text="v0.7.0" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
                     </StackPanel>
                 </DockPanel>
                 <TextBlock Name="DriverStatusLabel" Text="Checking drivers…" Style="{StaticResource Hint}" Margin="0,0,0,10"/>
@@ -232,6 +232,12 @@
                             <Button Name="KeepAliveRemoveButton" Content="Remove task" Style="{StaticResource Btn}" Width="110" DockPanel.Dock="Right" Margin="8,0,0,0" Click="KeepAliveRemove_Click"/>
                             <Button Name="KeepAliveButton" Content="Enable daily refresh" Style="{StaticResource Btn}" Width="150" DockPanel.Dock="Right" Margin="8,0,0,0" Click="KeepAlive_Click"/>
                             <TextBlock Name="KeepAliveStatusLabel" Text="Auto-refresh: unknown" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <TextBlock Text="Spryzen helper (lets the Spryzen iPhone app install + refresh through this PC — point it at http://this-PC-IP:port)" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
+                        <DockPanel Margin="0,4,0,0">
+                            <Button Name="HelperButton" Content="Start helper" Style="{StaticResource Btn}" Width="110" DockPanel.Dock="Right" Margin="8,0,0,0" Click="Helper_Click"/>
+                            <TextBox Name="HelperPortBox" Text="8765" Width="70" DockPanel.Dock="Right" Margin="8,0,0,0" VerticalContentAlignment="Center"/>
+                            <TextBlock Name="HelperStatusLabel" Text="Helper: off" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
                         </DockPanel>
                     </StackPanel>
                 </Border>

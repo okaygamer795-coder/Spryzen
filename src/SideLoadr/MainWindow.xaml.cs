@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     private IpaInfo? _ipa;
     private CancellationTokenSource? _cts;
     private WatchFolderService? _watcher;
+    private HelperServer? _helper;
 
     private static string DefaultWatchFolder => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "SideLoadr", "Auto");
@@ -33,7 +34,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Loaded += MainWindow_Loaded;
-        Closed += (_, _) => _watcher?.Dispose();
+        Closed += (_, _) => { _watcher?.Dispose(); _helper?.Dispose(); };
     }
 
     private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -501,6 +502,85 @@ public partial class MainWindow : Window
         }
     }
 
+    // ---------- spryzen helper server ----------
+
+    private void Helper_Click(object sender, RoutedEventArgs e)
+    {
+        if (_helper?.Running == true)
+        {
+            _helper.Stop();
+            HelperButton.Content = "Start helper";
+            HelperStatusLabel.Text = "Helper: off";
+            Log("Helper server stopped.");
+            return;
+        }
+        if (!int.TryParse(HelperPortBox.Text.Trim(), out int port) || port is < 1024 or > 65535)
+        {
+            port = 8765;
+            HelperPortBox.Text = "8765";
+        }
+        try
+        {
+            var server = new HelperServer();
+            server.Start(port, HandleHelperRefreshAsync, HandleHelperInstallAsync, msg => Log(msg));
+            _helper = server;
+            HelperButton.Content = "Stop helper";
+            HelperStatusLabel.Text = $"Helper: on (port {port})";
+        }
+        catch (Exception ex)
+        {
+            Log("Helper server failed to start: " + ex.Message, isError: true);
+        }
+    }
+
+    private async Task<HelperResult> HandleHelperRefreshAsync(RefreshRequest req)
+    {
+        var app = AppTracker.Load().FirstOrDefault(a =>
+            a.BundleId == req.BundleId && (string.IsNullOrEmpty(req.Udid) || a.Udid == req.Udid));
+        if (app is null || string.IsNullOrEmpty(app.IpaPath))
+            return new HelperResult(false, "Unknown app — install it from SideLoadr first.");
+        if (!CredentialStore.TryLoad(out string appleId, out string password))
+            return new HelperResult(false, "No saved credentials — turn on Remember me in SideLoadr.");
+        string anisette = AppTracker.LoadSettings().AnisetteUrl;
+        if (string.IsNullOrWhiteSpace(anisette))
+            anisette = AppTracker.DefaultAnisetteUrl;
+        try
+        {
+            var signReq = new SignRequest(app.IpaPath, appleId, password, anisette, app.Udid, () =>
+                Task.FromException<string>(new InvalidOperationException("2FA needed — sign in manually once.")));
+            string signed = await SigningService.SignWithFreeAccountAsync(signReq, msg => Log(msg), CancellationToken.None);
+            await InstallService.InstallAsync(signed, string.IsNullOrEmpty(app.Udid) ? null : app.Udid, msg => Log(msg), CancellationToken.None);
+            AppTracker.RecordInstalled(app.BundleId, app.BundleName, app.Udid, app.IpaPath);
+            Dispatcher.Invoke(RefreshTracked);
+            return new HelperResult(true, $"Renewed {app.BundleName}.");
+        }
+        catch (Exception ex)
+        {
+            return new HelperResult(false, ex.Message);
+        }
+    }
+
+    private async Task<HelperResult> HandleHelperInstallAsync(string fileName, byte[] ipa)
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "SideLoadr", "helper");
+        Directory.CreateDirectory(dir);
+        string path = Path.Combine(dir, fileName);
+        await File.WriteAllBytesAsync(path, ipa);
+        string? udid = Dispatcher.Invoke(() => SelectedDevice?.Udid);
+        try
+        {
+            var info = IpaReader.Read(path);
+            await InstallService.InstallAsync(path, udid, msg => Log(msg), CancellationToken.None);
+            AppTracker.RecordInstalled(info.BundleId, info.BundleName, udid, path);
+            Dispatcher.Invoke(RefreshTracked);
+            return new HelperResult(true, $"Installed {info.BundleName}.");
+        }
+        catch (Exception ex)
+        {
+            return new HelperResult(false, ex.Message);
+        }
+    }
+
     // ---------- actions ----------
 
     private async void SignInstall_Click(object sender, RoutedEventArgs e)
@@ -627,6 +707,7 @@ public partial class MainWindow : Window
             OpenWatchFolderButton.IsEnabled = !busy;
             KeepAliveButton.IsEnabled = !busy;
             KeepAliveRemoveButton.IsEnabled = !busy;
+            HelperButton.IsEnabled = !busy;
             InjectButton.IsEnabled = !busy;
             DylibBrowseButton.IsEnabled = !busy;
             SuperchargeButton.IsEnabled = !busy;

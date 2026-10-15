@@ -205,5 +205,53 @@ Check(IpaCustomizer.CompareVersions("14.0", "17.0") < 0, "version lt");
 Check(IpaCustomizer.CompareVersions("17.0", "17.0") == 0, "version eq");
 Check(IpaCustomizer.CompareVersions("18.1", "17.0") > 0, "version gt");
 
+// helper server (localhost, no device needed — validation happens first)
+static string WriteTempIpa(string name, byte[] bytes)
+{
+    string path = Path.Combine(Path.GetTempPath(), "sideloadr-test-" + Guid.NewGuid().ToString("N") + "-" + name);
+    File.WriteAllBytes(path, bytes);
+    return path;
+}
+static int FreePort()
+{
+    var l = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+    l.Start();
+    int p = ((System.Net.IPEndPoint)l.LocalEndpoint).Port;
+    l.Stop();
+    return p;
+}
+int hport = FreePort();
+using (var hs = new HelperServer())
+{
+    hs.Start(hport,
+        req => Task.FromResult(new HelperResult(false, "no such app: " + req.BundleId)),
+        (name, bytes) =>
+        {
+            string tmp = WriteTempIpa(name, bytes);
+            try
+            {
+                var info = IpaReader.Read(tmp);
+                return Task.FromResult(new HelperResult(true, "ok " + info.BundleId));
+            }
+            catch (Exception ex) { return Task.FromResult(new HelperResult(false, ex.Message)); }
+            finally { try { File.Delete(tmp); } catch { } }
+        },
+        _ => { });
+    using var http = new System.Net.Http.HttpClient();
+    string st = await http.GetStringAsync($"http://127.0.0.1:{hport}/status");
+    Check(st.Contains("\"ok\":true"), "helper status");
+    var r404 = await http.GetAsync($"http://127.0.0.1:{hport}/nope");
+    Check(r404.StatusCode == System.Net.HttpStatusCode.NotFound, "helper 404");
+    var badRefresh = await http.PostAsync($"http://127.0.0.1:{hport}/refresh",
+        new System.Net.Http.StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
+    Check(badRefresh.StatusCode == System.Net.HttpStatusCode.BadRequest, "helper bad refresh");
+    var unk = await http.PostAsync($"http://127.0.0.1:{hport}/refresh",
+        new System.Net.Http.StringContent("{\"udid\":\"\",\"bundleID\":\"com.nope\",\"profile\":\"\",\"ipa_sha256\":\"\"}", System.Text.Encoding.UTF8, "application/json"));
+    Check((await unk.Content.ReadAsStringAsync()).Contains("no such app"), "helper unknown app");
+    var badIpa = await http.PostAsync($"http://127.0.0.1:{hport}/install?filename=x.ipa",
+        new System.Net.Http.ByteArrayContent(new byte[] { 1, 2, 3 }));
+    Check((await badIpa.Content.ReadAsStringAsync()).Contains("\"ok\":false"), "helper bad ipa");
+}
+
 Console.WriteLine(failures == 0 ? "ALL OK" : $"{failures} FAILURES");
 return failures;
