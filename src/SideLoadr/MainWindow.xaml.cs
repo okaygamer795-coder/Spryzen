@@ -433,6 +433,36 @@ public partial class MainWindow : Window
         }
     }
 
+    // ---------- god mode ----------
+
+    private void Supercharge_Click(object sender, RoutedEventArgs e)
+    {
+        if (_ipa is null)
+        {
+            Log("Pick an IPA first.", isError: true);
+            return;
+        }
+        try
+        {
+            var opts = new IpaCustomizer.SuperchargeOptions(
+                string.IsNullOrWhiteSpace(NewBundleIdBox.Text) ? null : NewBundleIdBox.Text.Trim(),
+                string.IsNullOrWhiteSpace(NewNameBox.Text) ? null : NewNameBox.Text.Trim(),
+                string.IsNullOrWhiteSpace(IconPathBox.Text) ? null : IconPathBox.Text.Trim(),
+                string.IsNullOrWhiteSpace(DylibPathBox.Text) ? null : DylibPathBox.Text.Trim(),
+                RelaxCompatibility: CompatCheck.IsChecked == true,
+                EnableFileSharing: SharingCheck.IsChecked == true,
+                MinOs: string.IsNullOrWhiteSpace(MinOsBox.Text) ? null : MinOsBox.Text.Trim());
+            var result = IpaCustomizer.Supercharge(_ipa.FilePath, opts);
+            foreach (string note in result.Notes)
+                Log("God mode: " + note);
+            SetIpa(result.Path);
+        }
+        catch (Exception ex)
+        {
+            Log("Supercharge failed: " + ex.Message, isError: true);
+        }
+    }
+
     private async Task UpdateKeepAliveStatusAsync()    {
         try
         {
@@ -573,6 +603,7 @@ public partial class MainWindow : Window
             KeepAliveRemoveButton.IsEnabled = !busy;
             InjectButton.IsEnabled = !busy;
             DylibBrowseButton.IsEnabled = !busy;
+            SuperchargeButton.IsEnabled = !busy;
             BusyBar.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
             StatusLabel.Text = status;
         });

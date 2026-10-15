@@ -93,7 +93,7 @@
                         <TextBlock Text="SideLoadr" FontSize="24" FontWeight="Bold" Foreground="White"/>
                         <TextBlock Text="Sideload IPAs with a free Apple ID — drag &amp; drop an .ipa anywhere" Style="{StaticResource Hint}"/>
                     </StackPanel>
-                    <TextBlock Text="v0.5.0" DockPanel.Dock="Right" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
+                    <TextBlock Text="v0.6.0" DockPanel.Dock="Right" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
                 </DockPanel>
                 <TextBlock Name="DriverStatusLabel" Text="Checking drivers…" Style="{StaticResource Hint}" Margin="0,0,0,10"/>
                 <TextBlock Name="ToolsStatusLabel" Text="" Style="{StaticResource Hint}" Margin="0,0,0,10"/>
@@ -237,6 +237,31 @@
                             <TextBox Name="DylibPathBox" IsReadOnly="True" VerticalContentAlignment="Center"/>
                         </DockPanel>
                         <TextBlock Text="Refuses App Store-encrypted binaries (decrypt on a jailbroken device first). Output must be signed before install." Style="{StaticResource Hint}" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 7. god mode -->
+                <Border Style="{StaticResource Card}" BorderBrush="#007ACC" BorderThickness="2">
+                    <StackPanel>
+                        <TextBlock Text="7 · GOD MODE — everything at once (uses the boxes above)" Style="{StaticResource CardTitle}"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock Text="Min iOS (blank = keep)" Style="{StaticResource Hint}"/>
+                                <TextBox Name="MinOsBox" Text="14.0" VerticalContentAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Bottom">
+                                <CheckBox Name="CompatCheck" Content="Unlock iPhone+iPad, strip restrictions" IsChecked="True" Foreground="#E0E0E0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" VerticalAlignment="Bottom">
+                                <CheckBox Name="SharingCheck" Content="Enable file sharing (browse app data)" IsChecked="True" Foreground="#E0E0E0"/>
+                            </StackPanel>
+                        </Grid>
+                        <Button Name="SuperchargeButton" Content="⚡ SUPERCHARGE selected IPA" Style="{StaticResource PrimaryBtn}" HorizontalAlignment="Left" Click="Supercharge_Click"/>
                     </StackPanel>
                 </Border>
 

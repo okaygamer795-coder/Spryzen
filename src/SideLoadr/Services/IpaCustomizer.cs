@@ -227,6 +227,195 @@ public static class IpaCustomizer
         return new CustomizeResult(dest, notes);
     }
 
+    /// <summary>GOD MODE: clone + rename + icon + tweak injection + compatibility
+    /// patches in a single pass. Output must be re-signed before install.</summary>
+    public static CustomizeResult Supercharge(string srcPath, SuperchargeOptions opts)
+    {
+        if (!string.IsNullOrWhiteSpace(opts.BundleId))
+            ValidateBundleId(opts.BundleId.Trim());
+        byte[]? iconBytes = LoadPng(opts.IconPngPath, "Icon");
+        byte[]? dylibBytes = null;
+        string dylibName = "";
+        string loadPath = "";
+        if (!string.IsNullOrWhiteSpace(opts.DylibPath))
+        {
+            if (!File.Exists(opts.DylibPath))
+                throw new FileNotFoundException("Dylib not found.", opts.DylibPath);
+            if (!opts.DylibPath.EndsWith(".dylib", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Tweak must be a .dylib file.");
+            dylibBytes = File.ReadAllBytes(opts.DylibPath);
+            dylibName = Path.GetFileName(opts.DylibPath);
+            loadPath = "@executable_path/Frameworks/" + dylibName;
+        }
+
+        var dict = IpaReader.ReadPlist(srcPath);
+        var notes = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(opts.BundleId))
+        {
+            dict["CFBundleIdentifier"] = opts.BundleId.Trim();
+            notes.Add($"bundle id -> {opts.BundleId.Trim()}");
+        }
+        if (!string.IsNullOrWhiteSpace(opts.DisplayName))
+        {
+            dict["CFBundleDisplayName"] = opts.DisplayName.Trim();
+            dict["CFBundleName"] = opts.DisplayName.Trim();
+            notes.Add($"name -> {opts.DisplayName.Trim()}");
+        }
+        if (opts.RelaxCompatibility)
+            notes.AddRange(RelaxCompatibility(dict, opts.MinOs));
+        if (opts.EnableFileSharing)
+        {
+            dict["UIFileSharingEnabled"] = true;
+            dict["LSSupportsOpeningDocumentsInPlace"] = true;
+            notes.Add("file sharing enabled (browse app data via Files app)");
+        }
+
+        string? exeName = dict.TryGetValue("CFBundleExecutable", out var e) ? e?.ToString() : null;
+        List<string> iconNames = iconBytes is null ? new List<string>() : FindIconNames(dict);
+        string dest = NextTo(srcPath, "-god");
+
+        using var src = ZipFile.OpenRead(srcPath);
+        var plistEntry = src.Entries.FirstOrDefault(en => IsAppPlist(en.FullName))
+            ?? throw new InvalidDataException("No Payload/*.app/Info.plist found — not a valid IPA.");
+        string appDir = plistEntry.FullName[..^"Info.plist".Length];
+        string plistName = plistEntry.FullName;
+
+        string? exeEntryName = null;
+        if (dylibBytes is not null)
+        {
+            if (!string.IsNullOrEmpty(exeName))
+                exeEntryName = src.Entries.FirstOrDefault(en =>
+                    en.FullName.Equals(appDir + exeName, StringComparison.OrdinalIgnoreCase))?.FullName;
+            exeEntryName ??= src.Entries.FirstOrDefault(en =>
+                en.FullName.StartsWith(appDir, StringComparison.OrdinalIgnoreCase) &&
+                !en.FullName.EndsWith('/') &&
+                Path.GetFileName(en.FullName).IndexOf('.') < 0)?.FullName;
+            if (exeEntryName is null)
+                throw new InvalidDataException("Could not find the main executable in this IPA.");
+        }
+        byte[]? exeBytes = null;
+        if (exeEntryName is not null)
+        {
+            using var s = src.GetEntry(exeEntryName)!.Open();
+            using var ms = new MemoryStream();
+            s.CopyTo(ms);
+            exeBytes = ms.ToArray();
+            var inject = MachOInjector.InjectIntoBytes(exeBytes, loadPath);
+            notes.Add(inject.AlreadyPresent
+                ? $"already loads {loadPath}"
+                : $"tweak injected ({inject.SlicesPatched} slice(s), +{inject.CommandSize} bytes)");
+        }
+
+        byte[] newPlist = PlistWriter.WriteXml(dict);
+        using var destZip = ZipFile.Open(dest, ZipArchiveMode.Create);
+        foreach (var entry in src.Entries)
+        {
+            if (entry.FullName.Equals(plistName, StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (entry.FullName.EndsWith('/'))
+                continue;
+            bool isExe = exeEntryName is not null && entry.FullName.Equals(exeEntryName, StringComparison.OrdinalIgnoreCase);
+            bool isIcon = iconBytes is not null && IsIconFile(entry.FullName, appDir, iconNames);
+            var copy = destZip.CreateEntry(entry.FullName, CompressionLevel.Optimal);
+            using var output = copy.Open();
+            if (isExe)
+            {
+                output.Write(exeBytes!, 0, exeBytes!.Length);
+                notes.Add("executable patched");
+            }
+            else if (isIcon)
+            {
+                output.Write(iconBytes!, 0, iconBytes!.Length);
+                notes.Add($"icon replaced: {entry.FullName}");
+            }
+            else
+            {
+                using var input = entry.Open();
+                input.CopyTo(output);
+            }
+        }
+        var plistOut = destZip.CreateEntry(plistName, CompressionLevel.Optimal);
+        using (var w = plistOut.Open())
+            w.Write(newPlist, 0, newPlist.Length);
+
+        if (dylibBytes is not null)
+        {
+            var dylibEntry = destZip.CreateEntry(appDir + "Frameworks/" + dylibName, CompressionLevel.Optimal);
+            using var w = dylibEntry.Open();
+            w.Write(dylibBytes, 0, dylibBytes.Length);
+            notes.Add($"bundled Frameworks/{dylibName}");
+        }
+        if (iconBytes is not null && !notes.Any(n => n.StartsWith("icon replaced:")))
+            throw new InvalidDataException("No replaceable icon file found in this IPA.");
+        notes.Insert(0, $"wrote {dest}");
+        notes.Add("Re-sign before installing.");
+        return new CustomizeResult(dest, notes);
+    }
+
+    private static byte[]? LoadPng(string? path, string label)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return null;
+        if (!File.Exists(path))
+            throw new FileNotFoundException($"{label} file not found.", path);
+        byte[] bytes = File.ReadAllBytes(path);
+        if (bytes.Length < 8 || !bytes.Take(8).SequenceEqual(PngMagic))
+            throw new InvalidDataException($"{label} must be a PNG file.");
+        return bytes;
+    }
+
+    /// <summary>Strips install blockers so the app goes on more devices:
+    /// iPhone+iPad family, no required capabilities, optional lower min iOS.</summary>
+    internal static List<string> RelaxCompatibility(Dictionary<string, object?> dict, string? minOs)
+    {
+        var notes = new List<string>();
+        dict["UIDeviceFamily"] = new List<object?> { (long)1, (long)2 };
+        notes.Add("device family -> iPhone + iPad");
+        if (dict.Remove("UIRequiredDeviceCapabilities"))
+            notes.Add("stripped required device capabilities");
+        if (dict.Remove("UISupportedDevices"))
+            notes.Add("stripped supported-devices restriction");
+        if (!string.IsNullOrWhiteSpace(minOs))
+        {
+            string target = minOs.Trim();
+            string? current = dict.TryGetValue("MinimumOSVersion", out var v) ? v?.ToString() : null;
+            if (current is null || CompareVersions(target, current) < 0)
+            {
+                dict["MinimumOSVersion"] = target;
+                notes.Add($"minimum iOS -> {target} (was {current ?? "unset"})");
+            }
+            else
+            {
+                notes.Add($"minimum iOS already {current}, left alone");
+            }
+        }
+        return notes;
+    }
+
+    internal static int CompareVersions(string a, string b)
+    {
+        int[] pa = a.Split('.').Select(p => int.TryParse(p, out int n) ? n : 0).ToArray();
+        int[] pb = b.Split('.').Select(p => int.TryParse(p, out int n) ? n : 0).ToArray();
+        for (int i = 0; i < Math.Max(pa.Length, pb.Length); i++)
+        {
+            int x = i < pa.Length ? pa[i] : 0;
+            int y = i < pb.Length ? pb[i] : 0;
+            if (x != y)
+                return x.CompareTo(y);
+        }
+        return 0;
+    }
+
+    public sealed record SuperchargeOptions(
+        string? BundleId,
+        string? DisplayName,
+        string? IconPngPath,
+        string? DylibPath,
+        bool RelaxCompatibility,
+        bool EnableFileSharing,
+        string? MinOs);
+
     private static bool IsAppPlist(string fullName)
     {
         if (!fullName.StartsWith("Payload/", StringComparison.OrdinalIgnoreCase))

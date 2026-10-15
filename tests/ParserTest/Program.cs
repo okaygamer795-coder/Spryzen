@@ -170,5 +170,40 @@ try { IpaCustomizer.InjectTweak(@"D:\SideLoadr\tests\test.ipa", @"D:\SideLoadr\t
 catch (Exception) { noexe = true; }
 Check(noexe, "inject rejects bad exe");
 
+// god mode supercharge
+var god = IpaCustomizer.Supercharge(@"D:\SideLoadr\tests\test-god.ipa", new IpaCustomizer.SuperchargeOptions(
+    "com.test.godapp.clone", "GodApp 2", @"D:\SideLoadr\tests\newicon.png", @"D:\SideLoadr\tests\fake.dylib",
+    RelaxCompatibility: true, EnableFileSharing: true, MinOs: "14.0"));
+var gdict = IpaReader.ReadPlist(god.Path);
+Check(((List<object?>)gdict["UIDeviceFamily"]!).Select(v => (long)v!).SequenceEqual(new[] { 1L, 2L }), "god device family");
+Check(!gdict.ContainsKey("UIRequiredDeviceCapabilities"), "god caps stripped");
+Check((string)gdict["MinimumOSVersion"]! == "14.0", "god min ios");
+Check((bool)gdict["UIFileSharingEnabled"]! == true, "god file sharing");
+Check((bool)gdict["LSSupportsOpeningDocumentsInPlace"]! == true, "god open in place");
+Check(IpaReader.Read(god.Path).BundleId == "com.test.godapp.clone", "god renamed");
+using (var zip = System.IO.Compression.ZipFile.OpenRead(god.Path))
+{
+    var fw = zip.GetEntry("Payload/GodApp.app/Frameworks/fake.dylib")!;
+    using var fs = fw.Open();
+    using var fms = new MemoryStream();
+    fs.CopyTo(fms);
+    Check(fms.ToArray().SequenceEqual(File.ReadAllBytes(@"D:\SideLoadr\tests\fake.dylib")), "god dylib bundled");
+    var gexe = zip.GetEntry("Payload/GodApp.app/GodApp")!;
+    using var gs = gexe.Open();
+    using var gms = new MemoryStream();
+    gs.CopyTo(gms);
+    Check(ContainsSeq(gms.ToArray(), loadBytes), "god exe patched");
+    var gicon = zip.GetEntry("Payload/GodApp.app/AppIcon60x60@2x.png")!;
+    using var gis = gicon.Open();
+    using var gims = new MemoryStream();
+    gis.CopyTo(gims);
+    Check(gims.ToArray().SequenceEqual(File.ReadAllBytes(@"D:\SideLoadr\tests\newicon.png")), "god icon swapped");
+}
+Check(god.Notes.Any(n => n.Contains("Re-sign")), "god notes resign");
+File.Delete(god.Path);
+Check(IpaCustomizer.CompareVersions("14.0", "17.0") < 0, "version lt");
+Check(IpaCustomizer.CompareVersions("17.0", "17.0") == 0, "version eq");
+Check(IpaCustomizer.CompareVersions("18.1", "17.0") > 0, "version gt");
+
 Console.WriteLine(failures == 0 ? "ALL OK" : $"{failures} FAILURES");
 return failures;
