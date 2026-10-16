@@ -13,7 +13,7 @@ AppId={{7E8F9A0B-1C2D-4E5F-8A6B-7C8D9E0F1A2B}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-DefaultDirName={autopf}\SideLoadr
+DefaultDirName={localappdata}\Programs\SideLoadr
 DefaultGroupName=SideLoadr
 OutputDir=..\installer-output
 OutputBaseFilename=SideLoadr-Setup-{#MyAppVersion}
@@ -28,8 +28,8 @@ WizardStyle=modern
 Name: desktopicon; Description: "Create a &desktop icon"; Flags: unchecked
 
 [Files]
-Source: "..\publish-single\SideLoadr.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\src\SideLoadr\tools\*"; DestDir: "{app}\tools"; Flags: ignoreversion recursesubdirs skipifsourcedoesntexist
+; Multi-file self-contained publish (no temp extraction at launch — works on full disks).
+Source: "..\publish-app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 
 [Icons]
 Name: "{group}\SideLoadr"; Filename: "{app}\{#MyAppExeName}"
