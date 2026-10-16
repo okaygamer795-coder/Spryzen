@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DoodleVibe — chill drawing</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: #101014; color: #e8e8ef;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  header { padding: 14px 10px 6px; text-align: center; }
+  header h1 { margin: 0; font-size: 22px; letter-spacing: 1px; }
+  header p { margin: 4px 0 0; color: #9a9ab0; font-size: 13px; }
+  #bar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center;
+    padding: 10px; max-width: 1100px;
+  }
+  #bar > * { font-size: 13px; }
+  button, select, input[type="color"] {
+    background: #23232e; color: #e8e8ef; border: 1px solid #3a3a4d;
+    border-radius: 8px; padding: 7px 12px; cursor: pointer;
+  }
+  button:hover { background: #2e2e42; }
+  button.accent { background: #0a84ff; border-color: #0a84ff; font-weight: 600; }
+  button.accent:hover { background: #3395ff; }
+  button.on { outline: 2px solid #7c5cff; }
+  label { color: #9a9ab0; }
+  input[type="range"] { width: 110px; accent-color: #7c5cff; }
+  #wrap {
+    width: min(1100px, 96vw);
+    border: 1px solid #2c2c3a; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 0 60px rgba(124, 92, 255, 0.12);
+  }
+  canvas { display: block; width: 100%; height: 62vh; min-height: 380px; cursor: crosshair; touch-action: none; }
+  footer { color: #6a6a80; font-size: 12px; padding: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>✨ DoodleVibe</h1>
+  <p>draw something chill — neon, rainbows, kaleidoscopes. no wrong answers.</p>
+</header>
+<div id="bar">
+  <select id="brush" title="brush">
+    <option value="neon">Neon glow</option>
+    <option value="rainbow">Rainbow</option>
+    <option value="stars">Star stamps</option>
+    <option value="marker">Soft marker</option>
+    <option value="eraser">Eraser</option>
+  </select>
+  <select id="sym" title="symmetry">
+    <option value="1">No symmetry</option>
+    <option value="2">Mirror</option>
+    <option value="6">Kaleidoscope ×6</option>
+    <option value="8">Kaleidoscope ×8</option>
+  </select>
+  <input type="color" id="color" value="#7c5cff" title="color">
+  <label>size <input type="range" id="size" min="2" max="60" value="8"></label>
+  <button id="surprise" class="accent" title="generative art">🎲 Surprise me</button>
+  <button id="vibe" title="ambient tones">🔇 ambience</button>
+  <button id="save" title="download png">💾 Save</button>
+  <button id="clear" title="clear canvas">🧹 Clear</button>
+</div>
+<div id="wrap"><canvas id="c"></canvas></div>
+<footer>tip: kaleidoscope ×8 + rainbow + big brush = instant wallpaper</footer>
+<script>
+"use strict";
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+const brushEl = document.getElementById("brush");
+const symEl = document.getElementById("sym");
+const colorEl = document.getElementById("color");
+const sizeEl = document.getElementById("size");
+
+let W = 0, H = 0, CX = 0, CY = 0, hue = 260;
+
+function fit() {
+  const r = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  W = Math.max(50, Math.round(r.width));
+  H = Math.max(50, Math.round(r.height));
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  CX = W / 2; CY = H / 2;
+  paintBackground();
+}
+function paintBackground() {
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const g = ctx.createRadialGradient(
+    canvas.width / 2, canvas.height / 2, 10,
+    canvas.width / 2, canvas.height / 2, Math.max(canvas.width, canvas.height) / 1.4);
+  g.addColorStop(0, "#171722");
+  g.addColorStop(1, "#0c0c12");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
+}
+window.addEventListener("resize", () => {
+  const img = document.createElement("canvas");
+  img.width = canvas.width; img.height = canvas.height;
+  img.getContext("2d").drawImage(canvas, 0, 0);
+  fit();
+  ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, W, H);
+});
+fit();
+
+function strokeColor() {
+  if (brushEl.value === "rainbow") { hue = (hue + 2.5) % 360; return `hsl(${hue},95%,65%)`; }
+  return colorEl.value;
+}
+
+function drawSeg(x1, y1, x2, y2, color, size) {
+  const brush = brushEl.value;
+  ctx.save();
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  if (brush === "eraser") {
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.strokeStyle = "rgba(0,0,0,1)"; ctx.lineWidth = size * 2;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  } else if (brush === "stars") {
+    ctx.fillStyle = color;
+    const dx = x2 - x1, dy = y2 - y1;
+    const dist = Math.hypot(dx, dy);
+    const steps = Math.max(1, Math.floor(dist / 9));
+    for (let i = 0; i <= steps; i++) {
+      const px = x1 + dx * i / steps, py = y1 + dy * i / steps;
+      const r = size * (0.5 + Math.random() * 0.8);
+      star(px, py, r, color);
+    }
+  } else if (brush === "marker") {
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = color; ctx.lineWidth = size;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  } else { // neon
+    ctx.shadowBlur = size * 2.2; ctx.shadowColor = color;
+    ctx.strokeStyle = color; ctx.lineWidth = size;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = Math.max(1, size * 0.28);
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function star(px, py, r, color) {
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.rotate(Math.random() * Math.PI);
+  ctx.fillStyle = color;
+  ctx.shadowBlur = 12; ctx.shadowColor = color;
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const rr = i % 2 === 0 ? r : r * 0.45;
+    const a = i * Math.PI / 5 - Math.PI / 2;
+    ctx[i === 0 ? "moveTo" : "lineTo"](Math.cos(a) * rr, Math.sin(a) * rr);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function eachSymmetric(x1, y1, x2, y2, fn) {
+  const n = parseInt(symEl.value, 10) || 1;
+  for (let i = 0; i < n; i++) {
+    const a = i * Math.PI * 2 / n;
+    const cos = Math.cos(a), sin = Math.sin(a);
+    const rot = (x, y) => [CX + (x - CX) * cos - (y - CY) * sin, CY + (x - CX) * sin + (y - CY) * cos];
+    const [ax, ay] = rot(x1, y1), [bx, by] = rot(x2, y2);
+    fn(ax, ay, bx, by);
+    if (n > 1) fn(2 * CX - ax, ay, 2 * CX - bx, by); // mirror twin
+  }
+}
+
+let drawing = false, lx = 0, ly = 0;
+function pos(e) {
+  const r = canvas.getBoundingClientRect();
+  return [e.clientX - r.left, e.clientY - r.top];
+}
+canvas.addEventListener("pointerdown", e => {
+  drawing = true;
+  [lx, ly] = pos(e);
+  canvas.setPointerCapture(e.pointerId);
+  const c = strokeColor(), s = parseInt(sizeEl.value, 10);
+  eachSymmetric(lx, ly, lx + 0.1, ly + 0.1, (a, b, x, y) => drawSeg(a, b, x, y, c, s));
+});
+canvas.addEventListener("pointermove", e => {
+  if (!drawing) return;
+  const [x, y] = pos(e);
+  const c = strokeColor(), s = parseInt(sizeEl.value, 10);
+  eachSymmetric(lx, ly, x, y, (a, b, u, v) => drawSeg(a, b, u, v, c, s));
+  lx = x; ly = y;
+});
+const stop = () => { drawing = false; };
+canvas.addEventListener("pointerup", stop);
+canvas.addEventListener("pointercancel", stop);
+
+// ---------- surprise me: generative art ----------
+const PALETTES = [
+  ["#7c5cff", "#00d4ff", "#ff6ec7", "#ffe66d"],
+  ["#ff9a8b", "#ff6a88", "#ff99ac", "#fcb69f"],
+  ["#43e97b", "#38f9d7", "#a6ffcb", "#12d8fa"],
+  ["#fa709a", "#fee140", "#f6d365", "#fda085"],
+  ["#a18cd1", "#fbc2eb", "#84fab0", "#8fd3f4"],
+];
+function rnd(a, b) { return a + Math.random() * (b - a); }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+document.getElementById("surprise").addEventListener("click", () => {
+  paintBackground();
+  const pal = pick(PALETTES);
+  const modes = ["neon", "rainbow", "stars", "marker"];
+  const oldBrush = brushEl.value, oldSym = symEl.value;
+  const strokes = 14 + Math.floor(Math.random() * 14);
+  for (let s = 0; s < strokes; s++) {
+    brushEl.value = pick(modes);
+    symEl.value = String(pick([1, 2, 6, 8]));
+    const col = pick(pal);
+    const size = rnd(3, 26);
+    let x = rnd(0, W), y = rnd(0, H);
+    const segs = 8 + Math.floor(Math.random() * 22);
+    for (let i = 0; i < segs; i++) {
+      const nx = x + rnd(-160, 160), ny = y + rnd(-160, 160);
+      const c = brushEl.value === "rainbow" ? `hsl(${Math.floor(rnd(0, 360))},95%,65%)` : col;
+      eachSymmetric(x, y, nx, ny, (a, b, u, v) => drawSeg(a, b, u, v, c, size));
+      x = nx; y = ny;
+    }
+  }
+  // splatter
+  for (let i = 0; i < 220; i++) {
+    ctx.fillStyle = pick(pal);
+    ctx.globalAlpha = rnd(0.15, 0.7);
+    ctx.beginPath();
+    ctx.arc(rnd(0, W), rnd(0, H), rnd(0.6, 3.4), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  brushEl.value = oldBrush; symEl.value = oldSym;
+});
+
+// ---------- ambience: soft generative chimes ----------
+let actx = null, vibeOn = false, vibeTimer = null;
+const PENTA = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25];
+function pluck(freq) {
+  const t = actx.currentTime;
+  const o1 = actx.createOscillator(), o2 = actx.createOscillator();
+  const g = actx.createGain(), f = actx.createBiquadFilter();
+  o1.type = "sine"; o1.frequency.value = freq;
+  o2.type = "triangle"; o2.frequency.value = freq * 2;
+  f.type = "lowpass"; f.frequency.value = 1600;
+  const g2 = actx.createGain(); g2.gain.value = 0.12;
+  o1.connect(f); o2.connect(g2); g2.connect(f); f.connect(g); g.connect(actx.destination);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.5, t + 0.03);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + rnd(2.5, 4.5));
+  o1.start(t); o2.start(t); o1.stop(t + 5); o2.stop(t + 5);
+}
+const vibeBtn = document.getElementById("vibe");
+vibeBtn.addEventListener("click", () => {
+  if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+  vibeOn = !vibeOn;
+  vibeBtn.textContent = vibeOn ? "🔊 ambience" : "🔇 ambience";
+  vibeBtn.classList.toggle("on", vibeOn);
+  if (vibeOn) {
+    actx.resume();
+    const loop = () => { if (vibeOn) pluck(pick(PENTA)); };
+    loop();
+    vibeTimer = setInterval(loop, 2600);
+  } else {
+    clearInterval(vibeTimer);
+  }
+});
+
+// ---------- save / clear ----------
+document.getElementById("save").addEventListener("click", () => {
+  const a = document.createElement("a");
+  a.download = "doodlevibe-" + Date.now() + ".png";
+  a.href = canvas.toDataURL("image/png");
+  a.click();
+});
+document.getElementById("clear").addEventListener("click", paintBackground);
+</script>
+</body>
+</html>

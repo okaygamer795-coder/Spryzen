@@ -47,6 +47,11 @@ public partial class MainWindow : Window
         RefreshTracked();
         _ = RefreshDevicesAsync();
         _ = UpdateService.CheckForUpdatesAsync(msg => Log(msg), CancellationToken.None);
+        if (!AppTracker.IsSetupDone())
+        {
+            Log("First run: opening the setup wizard.");
+            new SetupWizard(msg => Log(msg)) { Owner = this }.Show();
+        }
         WatchModeBox.ItemsSource = new[] { "Install signed IPAs", "Sign + install (needs Apple ID)" };
         WatchModeBox.SelectedIndex = 0;
         WatchFolderBox.Text = DefaultWatchFolder;
@@ -188,11 +193,16 @@ public partial class MainWindow : Window
         });
     }
 
-    // ---------- guide ----------
+    // ---------- guide & setup ----------
 
     private void Guide_Click(object sender, RoutedEventArgs e)
     {
         new GuideWindow { Owner = this }.Show();
+    }
+
+    private void Setup_Click(object sender, RoutedEventArgs e)
+    {
+        new SetupWizard(msg => Log(msg)) { Owner = this }.Show();
     }
 
     // ---------- power tools ----------

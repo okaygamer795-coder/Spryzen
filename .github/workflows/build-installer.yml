@@ -1,0 +1,39 @@
+name: Build Installer
+
+on:
+  push:
+    paths:
+      - "src/**"
+      - "installer/**"
+      - ".github/workflows/build-installer.yml"
+  workflow_dispatch:
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish app
+        run: dotnet publish src/SideLoadr/SideLoadr.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o publish-single
+
+      - name: Read version
+        id: version
+        shell: pwsh
+        run: |
+          $v = ([xml](Get-Content src/SideLoadr/SideLoadr.csproj)).Project.PropertyGroup.Version
+          "number=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Build Setup.exe
+        run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion=${{ steps.version.outputs.number }} installer/sideloader.iss'
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SideLoadr-setup
+          path: installer-output/*.exe

@@ -14,6 +14,34 @@ public static class AppTracker
 
     private static string AppsPath => Path.Combine(StoreDir, "apps.json");
     private static string SettingsPath => Path.Combine(StoreDir, "settings.json");
+    private static string SetupFlagPath => Path.Combine(StoreDir, "setup.done");
+
+    /// <summary>Whether the first-run wizard was dismissed (separate tiny file
+    /// so old settings.json files keep working untouched).</summary>
+    public static bool IsSetupDone()
+    {
+        try { return File.Exists(SetupFlagPath); } catch { return false; }
+    }
+
+    public static void MarkSetupDone(bool done)
+    {
+        try
+        {
+            if (done)
+            {
+                Directory.CreateDirectory(StoreDir);
+                File.WriteAllText(SetupFlagPath, "1");
+            }
+            else if (File.Exists(SetupFlagPath))
+            {
+                File.Delete(SetupFlagPath);
+            }
+        }
+        catch
+        {
+            // best effort only
+        }
+    }
 
     public static List<SideloadedApp> Load()
     {

@@ -94,8 +94,9 @@
                         <TextBlock Text="Sideload IPA files with a free Apple ID — 1 pick the file, 2 connect the iPhone, 3 sign in, 4 install. Drag &amp; drop an .ipa anywhere." Style="{StaticResource Hint}"/>
                     </StackPanel>
                     <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Orientation="Horizontal">
+                        <Button Name="SetupButton" Content="🧭 Setup" Style="{StaticResource Btn}" Click="Setup_Click"/>
                         <Button Name="GuideButton" Content="📖 Beginner guide" Style="{StaticResource Btn}" Click="Guide_Click"/>
-                        <TextBlock Text="v0.8.0" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
+                        <TextBlock Text="v0.9.0" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
                     </StackPanel>
                 </DockPanel>
                 <TextBlock Name="DriverStatusLabel" Text="Checking drivers…" Style="{StaticResource Hint}" Margin="0,0,0,10"/>
