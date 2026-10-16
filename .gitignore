@@ -9,6 +9,8 @@ packages/
 tools/*.exe
 tools/dotnet-install.ps1
 tools/localproxy.py
+tools/direct_upload.py
+tools/dl_file.py
 SideLoadr-*.exe
 SideLoadr-*.zip
 .DS_Store
