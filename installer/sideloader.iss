@@ -15,7 +15,7 @@ AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\SideLoadr
 DefaultGroupName=SideLoadr
-OutputDir=installer-output
+OutputDir=..\installer-output
 OutputBaseFilename=SideLoadr-Setup-{#MyAppVersion}
 Compression=lzma2/max
 SolidCompression=yes
@@ -28,8 +28,8 @@ WizardStyle=modern
 Name: desktopicon; Description: "Create a &desktop icon"; Flags: unchecked
 
 [Files]
-Source: "publish-single\SideLoadr.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "src\SideLoadr\tools\*"; DestDir: "{app}\tools"; Flags: ignoreversion recursesubdirs skipifsourcedoesntexist
+Source: "..\publish-single\SideLoadr.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\src\SideLoadr\tools\*"; DestDir: "{app}\tools"; Flags: ignoreversion recursesubdirs skipifsourcedoesntexist
 
 [Icons]
 Name: "{group}\SideLoadr"; Filename: "{app}\{#MyAppExeName}"
